@@ -1,6 +1,8 @@
 {
   "files.exclude": {
     "__error": "Not found",
-    "design.png": true
+    "design.png": true,
+    "**/*.exe": true,
+    "**/*.png": true
   }
 }

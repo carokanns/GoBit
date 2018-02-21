@@ -1,8 +1,9 @@
 package main
 
-import (
-"fmt"
-)
-func main(){
-	fmt.Println("Hello BinGo")
- }
+func main() {
+	tell("info string Hello BinGo")
+
+	uci(input())
+	
+	tell("info string quits program")
+}
