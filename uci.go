@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+var tell = mainTell
 var trim = strings.TrimSpace
 var low = strings.ToLower
 
@@ -35,7 +36,7 @@ func uci(inp chan string) {
 		case "uci":
 			handleUci()
 		case "stop":
-			handleStop(toEng,&bInfinite)
+			handleStop(toEng, &bInfinite)
 		case "quit", "q":
 			handleQuit(toEng)
 			quit = true
@@ -77,7 +78,7 @@ func handleBm(bm string, bInfinite bool) {
 	tell(bm)
 }
 
-func tell(text ...string) {
+func mainTell(text ...string) {
 	toGUI := ""
 	for _, t := range text {
 		toGUI += t

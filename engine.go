@@ -1,6 +1,7 @@
 package main
 
 func engine() (toEngine chan string, frEngine chan string) {
+	tell("info string Hello from engine")
 	frEngine = make(chan string)
 	toEngine = make(chan string)
 	go func() {
