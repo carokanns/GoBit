@@ -1,7 +1,9 @@
 package main
 
+import "fmt"
+
 func engine() (toEngine chan string, frEngine chan string) {
-	tell("info string Hello from engine")
+	fmt.Println("info string Hello from engine")
 	frEngine = make(chan string)
 	toEngine = make(chan string)
 	go func() {
@@ -10,7 +12,6 @@ func engine() (toEngine chan string, frEngine chan string) {
 			switch cmd {
 			case "stop":
 			case "quit":
-
 			}
 		}
 	}()

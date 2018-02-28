@@ -436,7 +436,7 @@ This is how the communication when the engine boots can look like:
 
 uci
 
-      	id name BinGo
+      	id name GoBit
 	  	id author Carokanns
 		option name Hash type spin default 1 min 1 max 128
   		option name Style type combo default Normal var Solid var Normal var Risky

@@ -3,6 +3,8 @@
     "__error": "Not found",
     "design.png": true,
     "**/*.exe": true,
-    "**/*.png": true
+    "**/*.png": true,
+    ".gitignore": true,
+    "temp.go": true
   }
 }

@@ -14,8 +14,8 @@ var low = strings.ToLower
 
 var saveBm = ""
 
-func uci(inp chan string) {
-	tell("info string Hello from uci")
+func uci(input chan string) {
+	fmt.Println("info string Hello from uci")
 	toEng, frEng := engine()
 	bInfinite := false
 	var cmd string
@@ -23,8 +23,8 @@ func uci(inp chan string) {
 	quit := false
 	for !quit {
 		select {
-		case cmd = <-inp:
-			tell("info string uci got ", cmd)
+		case cmd = <-input:
+			//			tell("info string uci got ", cmd, "\n")
 		case bm = <-frEng:
 			handleBm(bm, bInfinite)
 			continue
@@ -42,7 +42,7 @@ func uci(inp chan string) {
 		case "ucinewgame":
 			handleNewgame()
 		case "position":
-			handlePosition(words)
+			handlePosition(cmd)
 		case "debug":
 			handleDebug(words)
 		case "register":
@@ -51,7 +51,6 @@ func uci(inp chan string) {
 			handleGo(words)
 		case "ponderhit":
 			handlePonderhit()
-
 		case "stop":
 			handleStop(toEng, &bInfinite)
 		case "quit", "q":
@@ -60,16 +59,15 @@ func uci(inp chan string) {
 			continue
 
 		default:
-			fmt.Println("unknown cmd", cmd)
-			tell("info string unknown cmd")
+			tell("info string unknown cmd", cmd)
 		}
 	}
-	
+
 	tell("info string leaving uci()")
 }
 
 func handleUci() {
-	tell("id name BinGo")
+	tell("id name GoBit")
 	tell("id author Carokanns")
 
 	tell("option name Hash type spin default 128 min 16 max 1024")
@@ -91,6 +89,7 @@ func handleStop(toEng chan string, bInfinite *bool) {
 		toEng <- "stop"
 		*bInfinite = false
 	}
+	tell("info string stop not implemented")
 }
 
 // handleQuit not really necessary
@@ -106,38 +105,54 @@ func handleBm(bm string, bInfinite bool) {
 	tell(bm)
 }
 
-// not implemented
-
+// not implemented uci commands
 func handleSetOption(words []string) {
 	// setoption name Hash value 256
-	fmt.Println("handleSetOption starting", words)
 	tell("info string setoption not implemented")
 }
+
 func handleNewgame() {
-	fmt.Println("handleNewgame starting")
 	tell("info string ucinewgame not implemented")
 }
 
-func handlePosition(words []string) {
+func handlePosition(cmd string) {
 	// position [fen <fenstring> | startpos ]  moves <move1> .... <movei>
-	
-	if len(words) > 1 {
-		words[1] = trim(low(words[1]))
-		switch words[1] {
-		case "startpos":
-			tell("info string position startpos not implemented")
-		case "fen":
-			tell("info string position fen not implemented")
-		default:
-			tell("info string position ", words[1], " not implemented")
-		}
+	cmd = trim(strings.TrimPrefix(cmd, "position"))
+	parts := strings.Split(cmd, "moves")
+	if len(cmd) == 0 || len(parts) > 2 {
+		err := fmt.Errorf("%v wrong length=%v", parts, len(parts))
+		tell("info string Error", fmt.Sprint(err))
+		return
+	}
+
+	alt := strings.Split(parts[0], " ")
+	alt[0] = trim(alt[0])
+	tell("info string position ", alt[0], " not implemented")
+
+	if alt[0] == "startpos" {
+		parts[0] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+	} else if alt[0] == "fen" {
+		parts[0] = trim(alt[1])
 	} else {
-		tell("info string position not implemented")
+		err := fmt.Errorf("%#v must be %#v or %#v", alt[0], "fen", "startpos")
+		tell("info string Error", err.Error())
+		return
+	}
+	// Now parts[0] is the fen-string only
+
+	// start the parsing
+	fmt.Printf("info string parse %#v\n", parts[0])
+	parseFEN(parts[0])
+
+	if len(parts) == 2 {
+		parts[1] = low(trim(parts[1]))
+		fmt.Printf("info string parse %#v\n", parts[1])
+		parseMvs(parts[1])
 	}
 }
+
 func handleGo(words []string) {
 	// go  searchmoves <move1-moveii>/ponder/wtime <ms>/ btime <ms>/winc <ms>/binc <ms>/movestogo <x>/depth <x>/nodes <x>/movetime <ms>/mate <x>/infinite
-	fmt.Println("handleGo starting")
 	if len(words) > 1 {
 		words[1] = trim(low(words[1]))
 		switch words[1] {
@@ -161,7 +176,7 @@ func handleGo(words []string) {
 			tell("info string go nodes not implemented")
 		case "movetime":
 			tell("info string go movetime not implemented")
-		case "mate":
+		case "mate": // mate <x>  mate in x moves
 			tell("info string go mate not implemented")
 		case "infinite":
 			tell("info string go infinite not implemented")
@@ -174,18 +189,16 @@ func handleGo(words []string) {
 }
 
 func handlePonderhit() {
-	fmt.Println("handlePonderhit starting")
 	tell("info string ponderhit not implemented")
 }
 
 func handleDebug(words []string) {
 	// debug [ on | off ]
-	fmt.Println("handleDebug starting")
 	tell("info string debug not implemented")
 }
+
 func handleRegister(words []string) {
 	// register later/name <x>/code <y>
-	fmt.Println("handleRegister starting")
 	tell("info string register not implemented")
 }
 
