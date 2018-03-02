@@ -59,7 +59,7 @@ func uci(input chan string) {
 			continue
 
 		default:
-			tell("info string unknown cmd", cmd)
+			tell("info string unknown cmd ", cmd)
 		}
 	}
 
@@ -112,7 +112,7 @@ func handleSetOption(words []string) {
 }
 
 func handleNewgame() {
-	tell("info string ucinewgame not implemented")
+	board.newGame()
 }
 
 func handlePosition(cmd string) {
@@ -127,12 +127,10 @@ func handlePosition(cmd string) {
 
 	alt := strings.Split(parts[0], " ")
 	alt[0] = trim(alt[0])
-	tell("info string position ", alt[0], " not implemented")
-
 	if alt[0] == "startpos" {
 		parts[0] = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
 	} else if alt[0] == "fen" {
-		parts[0] = trim(alt[1])
+		parts[0] = trim(strings.TrimPrefix(parts[0], "fen"))
 	} else {
 		err := fmt.Errorf("%#v must be %#v or %#v", alt[0], "fen", "startpos")
 		tell("info string Error", err.Error())
