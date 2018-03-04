@@ -171,6 +171,7 @@ func parse50(fen50 string) int {
 
 // parse and make the moves in position command from GUI
 func parseMvs(mvstr string) {
+	// TODO 1. Make moves from fen-string 
 	mvs := strings.Split(mvstr, " ")
 
 	for _, mv := range mvs {
