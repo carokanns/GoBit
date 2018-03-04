@@ -61,9 +61,89 @@ func (b *boardStruct) clear() {
 		b.pieceBB[ix] = 0
 	}
 }
-func (b *boardStruct) move(fr, to, pr int) {
-	// TODO 1. move in board
+
+// make a pseudomove
+func (b *boardStruct) move(fr, to, pr int) bool {
+	newEp := 0
+	// we assume that the move is legally correct
+	p12 := b.sq[fr]
+	switch {
+	case p12 == wK:
+		b.castlings.off(shortW | longW)
+		if abs(to-fr) == 2 {
+			if fr == E1 {
+				if to == G1 {
+					b.setSq(wR, F1)
+					b.setSq(empty, H1)
+				} else {
+					b.setSq(wR, D1)
+					b.setSq(empty, A1)
+				}
+			}
+		}
+	case p12 == bK:
+		b.castlings.off(shortB | longB)
+		if abs(to-fr) == 2 {
+			if fr == E8 {
+				if to == G8 {
+					b.setSq(bR, F8)
+					b.setSq(empty, H8)
+				} else {
+					b.setSq(bR, D8)
+					b.setSq(empty, A8)
+				}
+			}
+		}
+	case p12 == wR:
+		if fr == A1 {
+			b.off(longW)
+		} else if fr == H1 {
+			b.off(shortW)
+		}
+	case p12 == bR:
+		if fr == A8 {
+			b.off(longB)
+		} else if fr == H8 {
+			b.off(shortB)
+		}
+
+	case p12 == wP && b.sq[to] == empty: // ep move or set ep
+		if to-fr == 16 {
+			newEp = fr + 8
+		} else if to-fr == 7 { // must be ep
+			b.setSq(empty, to-8)
+		} else if to-fr == 9 { // must be ep
+			b.setSq(empty, to-8)
+		}
+	case p12 == bP && b.sq[to] == empty: //  ep move or set ep
+		if fr-to == 16 {
+			newEp = to + 8
+		} else if fr-to == 7 { // must be ep
+			b.setSq(empty, to+8)
+		} else if fr-to == 9 { // must be ep
+			b.setSq(empty, to+8)
+		}
+	}
+	b.ep = newEp
+	b.setSq(empty, fr)
+
+	if pr != empty {
+		b.setSq(pr, to)
+	} else {
+		b.setSq(p12, to)
+	}
+
+	// TODO isInCheck(stm) need to be made
+	/*
+		if b.isInCheck(b.stm) {
+			b.stm = b.stm ^ 0x1
+			return false
+		}
+	*/
+	b.stm = b.stm ^ 0x1
+	return true
 }
+
 func (b *boardStruct) setSq(p12, s int) {
 	b.sq[s] = p12
 	if p12 == empty {
@@ -219,6 +299,13 @@ func parseMvs(mvstr string) {
 		}
 		board.move(fr, to, pr)
 	}
+}
+
+func abs(a int) int {
+	if a < 0 {
+		return -a
+	}
+	return a
 }
 
 // fen2Int convert pieceString to p12 int
