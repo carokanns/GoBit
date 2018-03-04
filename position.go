@@ -61,7 +61,9 @@ func (b *boardStruct) clear() {
 		b.pieceBB[ix] = 0
 	}
 }
-
+func (b *boardStruct) move(fr, to, pr int) {
+	// TODO 1. move in board
+}
 func (b *boardStruct) setSq(p12, s int) {
 	b.sq[s] = p12
 	if p12 == empty {
@@ -171,11 +173,51 @@ func parse50(fen50 string) int {
 
 // parse and make the moves in position command from GUI
 func parseMvs(mvstr string) {
-	// TODO 1. Make moves from fen-string 
-	mvs := strings.Split(mvstr, " ")
+
+	mvs := strings.Fields(low(mvstr))
 
 	for _, mv := range mvs {
-		fmt.Println("make move", mv)
+		mv = trim(mv)
+		if len(mv) < 4 {
+			tell("info string ", mv, " in the position command is not a correct move")
+			return
+		}
+		// is fr square ok?
+		fr, ok := fenSq2Int[mv[:2]]
+		if !ok {
+			tell("info string ", mv, " in the position command is not a correct fr square")
+			return
+		}
+
+		p12 := board.sq[fr]
+		if p12 == empty {
+			tell("info string ", mv, " in the position command. fr_sq is an empty square")
+			return
+		}
+		pCol := p12Color(p12)
+		if pCol != board.stm {
+			tell("info string ", mv, " in the position command. fr piece has the wrong color")
+			return
+		}
+
+		// is to square ok?
+		to, ok := fenSq2Int[mv[2:4]]
+		if !ok {
+			tell("info string ", mv, " in the position has an incorrect to square")
+			return
+		}
+
+		// is the prom piece ok?
+		pr := 0
+		if len(mv) == 5 { //prom
+			if !strings.ContainsAny(mv[4:5], "qrbn") {
+				tell("info string promotion piece in ", mv, " in the position command is not correct")
+				return
+			}
+			pr = fen2Int(mv[4:5])
+			pr = pc2P12(pr, board.stm)
+		}
+		board.move(fr, to, pr)
 	}
 }
 
@@ -205,6 +247,11 @@ func piece(p12 int) int {
 // p12Color returns the color of a p12 form
 func p12Color(p12 int) color {
 	return color(p12 & 0x1)
+}
+
+// pc2P12 returns p12 from pc and sd
+func pc2P12(pc int, sd color) int {
+	return (pc << 1) | int(sd)
 }
 
 // map fen-sq to int
