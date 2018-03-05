@@ -38,7 +38,7 @@ func (b *boardStruct) allBB() bitBoard {
 	return b.wbBB[0] | b.wbBB[1]
 }
 
-// clear the board, flags, bitboards etc
+// clear the board, flags, bitboards etc to get a nil board
 func (b *boardStruct) clear() {
 	b.stm = WHITE
 	b.rule50 = 0
