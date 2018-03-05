@@ -258,7 +258,7 @@ func parseMvs(mvstr string) {
 
 	for _, mv := range mvs {
 		mv = trim(mv)
-		if len(mv) < 4 {
+		if len(mv) < 4 || len(mv) > 5 {
 			tell("info string ", mv, " in the position command is not a correct move")
 			return
 		}

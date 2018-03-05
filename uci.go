@@ -16,7 +16,7 @@ var saveBm = ""
 
 func uci(input chan string) {
 	fmt.Println("info string Hello from uci")
-	// TODO 2. Two non UCI-commands PB and PBB 
+	// TODO 2. Two non UCI-commands PB and PBB
 	toEng, frEng := engine()
 	bInfinite := false
 	var cmd string
@@ -80,38 +80,6 @@ func handleIsReady() {
 	tell("readyok")
 }
 
-func handleStop(toEng chan string, bInfinite *bool) {
-	if *bInfinite {
-		if saveBm != "" {
-			tell(saveBm)
-			saveBm = ""
-		}
-
-		toEng <- "stop"
-		*bInfinite = false
-	}
-	tell("info string stop not implemented")
-}
-
-// handleQuit not really necessary
-func handleQuit(toEng chan string) {
-	toEng <- "stop"
-}
-
-func handleBm(bm string, bInfinite bool) {
-	if bInfinite {
-		saveBm = bm
-		return
-	}
-	tell(bm)
-}
-
-// not implemented uci commands
-func handleSetOption(words []string) {
-	// setoption name Hash value 256
-	tell("info string setoption not implemented")
-}
-
 func handleNewgame() {
 	board.newGame()
 }
@@ -148,6 +116,38 @@ func handlePosition(cmd string) {
 		fmt.Printf("info string parse %#v\n", parts[1])
 		parseMvs(parts[1])
 	}
+}
+
+func handleStop(toEng chan string, bInfinite *bool) {
+	if *bInfinite {
+		if saveBm != "" {
+			tell(saveBm)
+			saveBm = ""
+		}
+
+		toEng <- "stop"
+		*bInfinite = false
+	}
+	tell("info string stop not implemented")
+}
+
+// handleQuit not really necessary
+func handleQuit(toEng chan string) {
+	toEng <- "stop"
+}
+
+func handleBm(bm string, bInfinite bool) {
+	if bInfinite {
+		saveBm = bm
+		return
+	}
+	tell(bm)
+}
+
+// not implemented uci commands
+func handleSetOption(words []string) {
+	// setoption name Hash value 256
+	tell("info string setoption not implemented")
 }
 
 // go  searchmoves <move1-moveii>/ponder/wtime <ms>/ btime <ms>/winc <ms>/binc <ms>/movestogo <x>/depth <x>/nodes <x>/movetime <ms>/mate <x>/infinite
@@ -202,6 +202,7 @@ func handleRegister(words []string) {
 	tell("info string register not implemented")
 }
 
+//------------------------------------------------------
 func mainTell(text ...string) {
 	toGUI := ""
 	for _, t := range text {

@@ -1,3 +1,4 @@
+
 package main
 
 import (
@@ -32,6 +33,9 @@ func Test_Uci(t *testing.T) {
 		{"skit", "skit", []string{"info string unknown cmd skit"}},
 		{"pos skit", "position skit", []string{"info string Error\"skit\" must be \"fen\" or \"startpos\""}},
 		{"position no cmd", "position", []string{"info string Error[] wrong length=1"}},
+		{"pos incorrect move 1", "position startpos moves e2j4", []string{"info string e2j4 in the position has an incorrect to square"}},
+		{"pos incorrect move 2", "position startpos moves e3e4", []string{"info string e3e4 in the position command. fr_sq is an empty square"}},
+	//	{"pos incorrect move 3", "position startpos moves e2e4 e7e5 e4e5", []string{"info string e4e5 in moves within the postion commad is not a corect move"}},
 		{"ponderhit", "ponderhit", []string{"info string ponderhit not implemented"}},
 		{"debug", "debug on", []string{"info string debug not implemented"}},
 		{"go movetime", "go movetime 1000", []string{"info string go movetime not implemented"}},
