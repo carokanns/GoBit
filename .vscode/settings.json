@@ -5,6 +5,9 @@
     "**/*.exe": true,
     "**/*.png": true,
     ".gitignore": true,
-    "temp.go": true
+    "temp.go": true,
+    "README.md": true,
+    "LICENSE": true,
+    "uci_example.txt": true
   }
 }

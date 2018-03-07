@@ -16,7 +16,7 @@ var saveBm = ""
 
 func uci(input chan string) {
 	fmt.Println("info string Hello from uci")
-	// TODO 2. Two non UCI-commands PB and PBB
+	// TODO: Two non UCI-commands PB and PBB
 	toEng, frEng := engine()
 	bInfinite := false
 	var cmd string
@@ -58,7 +58,10 @@ func uci(input chan string) {
 			handleQuit(toEng)
 			quit = true
 			continue
-
+		case "pb":
+			board.Print()
+		case "pbb":
+			board.printAllBB()
 		default:
 			tell("info string unknown cmd ", cmd)
 		}
@@ -152,7 +155,7 @@ func handleSetOption(words []string) {
 
 // go  searchmoves <move1-moveii>/ponder/wtime <ms>/ btime <ms>/winc <ms>/binc <ms>/movestogo <x>/depth <x>/nodes <x>/movetime <ms>/mate <x>/infinite
 func handleGo(words []string) {
-	// TODO 3. Start with the go-command
+	// TODO: Start with the go-command
 	if len(words) > 1 {
 		words[1] = trim(low(words[1]))
 		switch words[1] {
