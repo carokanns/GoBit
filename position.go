@@ -170,6 +170,17 @@ func (b *boardStruct) newGame() {
 	b.clear()
 	parseFEN(startpos)
 }
+func (b *boardStruct) genRookMoves() {
+	sd := b.stm
+	frBB := b.pieceBB[Rook] & b.wbBB[sd]
+	p12 := pc2P12(Rook,sd)
+	b.genFrMoves(p12,frBB,&ml)
+}
+
+func (b *boardStruct) genFrMoves(p12 int, frBB bitBoard, ml *moveList){
+	// TODO finish genRookMoves
+}
+
 
 //////////////////////////////////// my own commands - NOT UCI /////////////////////////////////////
 func (b *boardStruct) Print() {

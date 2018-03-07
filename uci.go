@@ -16,7 +16,7 @@ var saveBm = ""
 
 func uci(input chan string) {
 	fmt.Println("info string Hello from uci")
-	// TODO: Two non UCI-commands PB and PBB
+
 	toEng, frEng := engine()
 	bInfinite := false
 	var cmd string
@@ -153,9 +153,10 @@ func handleSetOption(words []string) {
 	tell("info string setoption not implemented")
 }
 
-// go  searchmoves <move1-moveii>/ponder/wtime <ms>/ btime <ms>/winc <ms>/binc <ms>/movestogo <x>/depth <x>/nodes <x>/movetime <ms>/mate <x>/infinite
+// go  searchmoves <move1-moveii>/ponder/wtime <ms>/ btime <ms>/winc <ms>/binc <ms>/movestogo <x>/
+//     depth <x>/nodes <x>/movetime <ms>/mate <x>/infinite
 func handleGo(words []string) {
-	// TODO: Start with the go-command
+	// TODO: Start with moeveTime and infinite
 	if len(words) > 1 {
 		words[1] = trim(low(words[1]))
 		switch words[1] {
