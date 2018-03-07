@@ -1,0 +1,8 @@
+#GoBit
+**A Chess program in Go**
+
+This is from a Youtube serie that explains the steps in building a fairly strong chess engine. https://www.youtube.com/channel/UCsQEf3a1WvsgWTjzqNMkRjA/featured?view_as=public
+
+The Program will be featuring state of the art search techniques and is based on bitboards. Eventually magic numbers for bitBoards will be used for move generation.
+
+The Go-code from each video clip will be tagged here in Git.
