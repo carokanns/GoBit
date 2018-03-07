@@ -5,4 +5,4 @@ This is from a Youtube serie that explains the steps in building a fairly strong
 
 The Program will be featuring state of the art search techniques and is based on bitboards. Eventually magic numbers for bitBoards will be used for move generation.
 
-The Go-code from each video clip will be tagged here in Git.
+The Go-code from the video clip will be tagged here in Git. Sometimes in groups.
