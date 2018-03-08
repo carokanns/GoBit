@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -85,12 +84,34 @@ func Test_parseCastlings(t *testing.T) {
 		{"", "kq", castlings(shortB | longB)},
 		{"", "Kk", castlings(shortW | shortB)},
 		{"", "KQkqrr", castlings(shortW | longW | shortB | longB)},
-		{"", "kQq", castlings( longW | shortB | longB)},
+		{"", "kQq", castlings(longW | shortB | longB)},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := parseCastlings(tt.fen); got != tt.want {
 				t.Errorf("parseCastlings(%v) = %v, want %v", tt.fen, got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_castlings_String(t *testing.T) {
+	tests := []struct {
+		name string
+		c    castlings
+		want string
+	}{
+		{"", 0, "-"},
+		{"", castlings(shortW | longB), "Kq"},
+		{"", castlings(shortW | longB), "Kq"},
+		{"", castlings(shortW | longW), "KQ"},
+		{"", castlings(shortB | longB), "kq"},
+		{"", castlings(shortW | longB | shortB | longW), "KQkq"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.c.String(); got != tt.want {
+				t.Errorf("castlings.String() = %v, want %v", got, tt.want)
 			}
 		})
 	}
