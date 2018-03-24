@@ -156,7 +156,7 @@ func handleSetOption(words []string) {
 // go  searchmoves <move1-moveii>/ponder/wtime <ms>/ btime <ms>/winc <ms>/binc <ms>/movestogo <x>/
 //     depth <x>/nodes <x>/movetime <ms>/mate <x>/infinite
 func handleGo(words []string) {
-	// TODO: Start with moeveTime and infinite
+	// TODO: Start with moveTime and infinite
 	if len(words) > 1 {
 		words[1] = trim(low(words[1]))
 		switch words[1] {

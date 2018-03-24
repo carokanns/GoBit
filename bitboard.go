@@ -33,7 +33,14 @@ func (b *bitBoard) firstOne() int {
 	return bit
 }
 
-//TODO: lastOne() here
+func (b *bitBoard) lastOne() int {
+	bit := bits.LeadingZeros64(uint64(*b))
+	if bit == 64 {
+		return 64
+	}
+	*b = (*b << uint(bit+1)) >> uint(bit+1)
+	return 63-bit
+}
 
 // returns the full bitstring (with leading zeroes) of the bitBoard
 func (b bitBoard) String() string {

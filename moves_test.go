@@ -17,13 +17,12 @@ func Test_moveList_add(t *testing.T) {
 	ml = moveList{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			tt.ml = tt.ml
 			tt.ml.add(tt.mv)
-			ix:=len(tt.ml.mv)-1
+			ix:=len(tt.ml)-1
 			if ix<0{
-				t.Fatalf("wrong len %v: %v %v %v",ix,tt.ml,tt.ml.mv,tt.ml.mv[0])
+				t.Fatalf("wrong len %v: %v %v",ix,tt.ml,tt.ml[0])
 			}
-			testMv := tt.ml.mv[ix]
+			testMv := tt.ml[ix]
 			if  testMv != tt.mv{
 				t.Errorf("tt.ml.add() = %v. want %v",testMv,tt.mv)
 			}

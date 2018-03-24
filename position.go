@@ -64,6 +64,7 @@ func (b *boardStruct) clear() {
 
 // make a pseudomove
 func (b *boardStruct) move(fr, to, pr int) bool {
+
 	newEp := 0
 	// we assume that the move is legally correct
 	p12 := b.sq[fr]
@@ -145,7 +146,11 @@ func (b *boardStruct) move(fr, to, pr int) bool {
 }
 
 func (b *boardStruct) setSq(p12, s int) {
+	if b.sq[s] != empty {
+		b.count[b.sq[s]]--
+	}
 	b.sq[s] = p12
+
 	if p12 == empty {
 		b.wbBB[WHITE].clr(uint(s))
 		b.wbBB[BLACK].clr(uint(s))
@@ -154,6 +159,8 @@ func (b *boardStruct) setSq(p12, s int) {
 		}
 		return
 	}
+	
+	b.count[p12]++
 
 	p := piece(p12)
 	sd := p12Color(p12)
@@ -165,6 +172,7 @@ func (b *boardStruct) setSq(p12, s int) {
 	b.wbBB[sd].set(uint(s))
 	b.pieceBB[p].set(uint(s))
 }
+
 func (b *boardStruct) newGame() {
 	b.stm = WHITE
 	b.clear()
@@ -173,14 +181,13 @@ func (b *boardStruct) newGame() {
 func (b *boardStruct) genRookMoves() {
 	sd := b.stm
 	frBB := b.pieceBB[Rook] & b.wbBB[sd]
-	p12 := pc2P12(Rook,sd)
-	b.genFrMoves(p12,frBB,&ml)
+	p12 := pc2P12(Rook, sd)
+	b.genFrMoves(p12, frBB, &ml)
 }
 
-func (b *boardStruct) genFrMoves(p12 int, frBB bitBoard, ml *moveList){
+func (b *boardStruct) genFrMoves(p12 int, frBB bitBoard, ml *moveList) {
 	// TODO finish genRookMoves
 }
-
 
 //////////////////////////////////// my own commands - NOT UCI /////////////////////////////////////
 func (b *boardStruct) Print() {
@@ -374,7 +381,7 @@ func parseMvs(mvstr string) {
 		}
 
 		// is the prom piece ok?
-		pr := 0
+		pr := empty
 		if len(mv) == 5 { //prom
 			if !strings.ContainsAny(mv[4:5], "qrbn") {
 				tell("info string promotion piece in ", mv, " in the position command is not correct")
