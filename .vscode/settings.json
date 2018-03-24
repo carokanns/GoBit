@@ -4,10 +4,16 @@
     "design.png": true,
     "**/*.exe": true,
     "**/*.png": true,
-    ".gitignore": true,
     "temp.go": true,
     "README.md": true,
     "LICENSE": true,
-    "uci_example.txt": true
-  }
+    "uci_example.txt": true,
+    "**/*.jpg": true,
+    ".gitignore": true,
+    "See_c": true
+  },
+  "cSpell.words": [
+    "Pval",
+    "finished"
+  ]
 }

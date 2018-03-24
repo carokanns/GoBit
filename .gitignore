@@ -3,5 +3,9 @@
 *.pprof
 *.png
 *.gif
+*.jpg
 *.svg
+*.c
+See_c/*.*
 temp.go
+See_c/SEE_Pradu.txt
