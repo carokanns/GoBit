@@ -10,7 +10,8 @@
     "uci_example.txt": true,
     "**/*.jpg": true,
     ".gitignore": true,
-    "See_c": true
+    "See_c": true,
+    "_config.yml": true
   },
   "cSpell.words": [
     "Pval",

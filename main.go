@@ -7,3 +7,8 @@ func main() {
 
 	tell("info string quits GOBIT")
 }
+
+func init(){
+	initFenSq2Int()
+	initMagic()
+}

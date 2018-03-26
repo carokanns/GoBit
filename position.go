@@ -6,10 +6,6 @@ import (
 	"strings"
 )
 
-func init() {
-	initFenSq2Int()
-}
-
 // various consts
 const (
 	nP12     = 12
@@ -179,8 +175,6 @@ func (b *boardStruct) newGame() {
 	parseFEN(startpos)
 }
 func (b *boardStruct) genRookMoves(ml *moveList, sd color) {
-	// TODO: generate rook moves with simple method - Benchmark
-	// TODO: create a non-uci-command pm (print all moves)
 	// TODO: explain magic numbers/bitboards
 	// TODO: create tables and methods to use magic numbers
 	// TODO: generate rook moves with magic bitBoards - Benchmark
@@ -188,7 +182,7 @@ func (b *boardStruct) genRookMoves(ml *moveList, sd color) {
 	allRBB := b.pieceBB[Rook] & b.wbBB[sd]
 	p12 := uint(pc2P12(Rook, color(sd)))
 	ep := uint(b.ep)
-	castl := b.castlings
+	castl := uint(b.castlings)
 	var mv move
 	for fr := allRBB.firstOne(); fr != 64; fr = allRBB.firstOne() {
 		rk := fr / 8
@@ -233,7 +227,7 @@ func (b *boardStruct) genRookMoves(ml *moveList, sd color) {
 			}
 		}
 		//W
-		for f := fl - 1; f <= 0; f-- {
+		for f := fl - 1; f >= 0; f-- {
 			to := uint(rk*8 + f)
 			cp := uint(b.sq[to])
 			if cp != empty && p12Color(int(cp)) == sd {
@@ -253,6 +247,21 @@ func (b *boardStruct) genFrMoves(p12 int, frBB bitBoard, ml *moveList) {
 }
 
 //////////////////////////////////// my own commands - NOT UCI /////////////////////////////////////
+
+func  (b *boardStruct) printAllMvs() {
+
+	fmt.Println("magic")
+	// var ml moveList
+	// board.genRookMovesM(&ml)
+	// fmt.Println(ml.String())
+
+	var ml1 moveList
+	fmt.Println("simple")
+	board.genRookMoves(&ml1, b.stm)
+	fmt.Println(ml1.String())
+
+}
+
 func (b *boardStruct) Print() {
 	txtStm := "BLACK"
 	if b.stm == WHITE {

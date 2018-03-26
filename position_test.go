@@ -87,3 +87,33 @@ func Test_boardStruct_setSq(t *testing.T) {
 		})
 	}
 }
+
+func Test_genRookMoves(t *testing.T) {
+	type args struct {
+		ml *moveList
+		sd color
+	}
+	tests := []struct {
+		name string
+		b    *boardStruct
+		args args
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.b.genRookMoves(tt.args.ml, tt.args.sd)
+		})
+	}
+}
+
+func Benchmark_genRookMoves(b *testing.B) {
+	// run the genRook function b.N times
+	var ml moveList
+	handleNewgame()
+	//handlePosition("position startpos moves a2a4 h7h6 a4a5 g8f6 a1a4 f6g8 a4e4 g8f6")
+
+	for n := 0; n < b.N; n++ {
+		board.genRookMoves(&ml, board.stm)
+	}
+}
