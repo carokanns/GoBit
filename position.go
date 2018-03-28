@@ -68,27 +68,23 @@ func (b *boardStruct) move(fr, to, pr int) bool {
 	case p12 == wK:
 		b.castlings.off(shortW | longW)
 		if abs(to-fr) == 2 {
-			if fr == E1 {
-				if to == G1 {
-					b.setSq(wR, F1)
-					b.setSq(empty, H1)
-				} else {
-					b.setSq(wR, D1)
-					b.setSq(empty, A1)
-				}
+			if to == G1 {
+				b.setSq(wR, F1)
+				b.setSq(empty, H1)
+			} else {
+				b.setSq(wR, D1)
+				b.setSq(empty, A1)
 			}
 		}
 	case p12 == bK:
 		b.castlings.off(shortB | longB)
 		if abs(to-fr) == 2 {
-			if fr == E8 {
-				if to == G8 {
-					b.setSq(bR, F8)
-					b.setSq(empty, H8)
-				} else {
-					b.setSq(bR, D8)
-					b.setSq(empty, A8)
-				}
+			if to == G8 {
+				b.setSq(bR, F8)
+				b.setSq(empty, H8)
+			} else {
+				b.setSq(bR, D8)
+				b.setSq(empty, A8)
 			}
 		}
 	case p12 == wR:
@@ -248,7 +244,7 @@ func (b *boardStruct) genFrMoves(p12 int, frBB bitBoard, ml *moveList) {
 
 //////////////////////////////////// my own commands - NOT UCI /////////////////////////////////////
 
-func  (b *boardStruct) printAllMvs() {
+func (b *boardStruct) printAllMvs() {
 
 	fmt.Println("magic")
 	// var ml moveList

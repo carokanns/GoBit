@@ -1,0 +1,125 @@
+P = 0;
+PAWN = 0;
+N = 1;
+B = 2;
+R = 3;
+Q = 4;
+K = 5;
+KING = 5;
+E = -1;
+WHITE = 0;
+BLACK = 1;
+Pval = 100;
+Qval = 900;
+Nval = 300;
+Bval = 330;
+Rval = 500;
+Kval = 99999;
+INF = 999999;
+EmptyBoardBB = 0x0;
+typedef unsigned long U64;
+typedef bool bool;
+typedef unsigned int Color;
+typedef unsigned int Piece;
+typedef unsigned int PieceType;
+typedef U64 Bitboard;
+
+typedef unsigned int Square;
+int see(Square from, Square to) 
+{               
+                // Go: Make unitTest first
+    // Approximate material values, with pawn = 1:
+    static const int seeValues[18] = {
+        0, 1, 3, 3, 5, 10, 100, 0, 0, 1, 3, 3, 5, 10, 100, 0, 0, 0};
+    Color us, them;
+    Piece piece, capture;
+    Bitboard attackers, occ;
+
+    // Initialize colors:
+    us = this->color_of_piece_at(from);     // Go: stm := b.stm
+    them = opposite_color(us);              // Go: opp := stm ^ 0x1
+
+    // Initialize pieces:
+    piece = this->piece_at(from);
+    capture = this->piece_at(to);   // go: toVal := seeValues[capture]
+
+    // Find all attackers to the destination square, but with the moving piece
+    // removed, but possibly an X-ray attacker added behind it:
+    occ = this->occupied_squares();
+    clear_bit(&occ, from);
+    attackers =
+        (rook_attacks_bb(to, occ) & this->rooks_and_queens()) |
+        (bishop_attacks_bb(to, occ) & this->bishops_and_queens()) |
+        (this->knight_attacks(to) & this->knights()) |
+        (this->king_attacks(to) & this->kings()) |
+        (this->white_pawn_attacks(to) & this->pawns_of_color(BLACK)) |
+        (this->black_pawn_attacks(to) & this->pawns_of_color(WHITE));
+    attackers &= occ;
+
+    // If the opponent has no attackers, we are finished:
+    if ((attackers & this->pieces_of_color(them)) == EmptyBoardBB)
+        return seeValues[capture];  // go: return toVal
+
+    // The destination square is defended, which makes things rather more
+    // difficult to compute.  We proceed by building up a "swap list" containing
+    // the material gain or loss at each stop in a sequence of captures to the
+    // destination square, where the sides alternately capture, and always
+    // capture with the least valuable piece.  After each capture, we look for
+    // new X-ray attacks from behind the capturing piece.
+    int lastCapturingPieceValue = seeValues[piece];  // Go: prevValue := seeValue[frPiece]
+    int swapList[32], n = 1;
+    Color c = them;
+    PieceType pt;
+    Bitboard b;
+
+    swapList[0] = seeValues[capture];   // Go: swapList[0] = toVal
+
+    do
+    {
+        // Locate the least valuable attacker for the side to move.  The loop
+        // below looks like it is potentially infinite, but it isn't.  We know
+        // that the side to move still has some attackers left.
+        // go  maybe getNext(.....): 
+        //   Pawns 
+        //   Knights
+        //   Bishops + Q
+        //   Rooks +  Q
+        //   King
+        for (pt = PAWN; !(attackers & this->pieces_of_color_and_type(c, pt)); pt++)
+            assert(pt <= KING);
+
+        // Remove the attacker we just found from the 'attackers' bitboard,
+        // and scan for new X-ray attacks behind the attacker:
+        b = attackers & this->pieces_of_color_and_type(c, pt);
+        occ ^= (b & -b);
+        // Go: the following works even when pt is non sliding because ther will be no new bits  
+        attackers |=
+            (rook_attacks_bb(to, occ) & this->rooks_and_queens()) |
+            (bishop_attacks_bb(to, occ) & this->bishops_and_queens());
+        attackers &= occ;
+
+        // Add the new entry to the swap list:
+        swapList[n] = -swapList[n - 1] + lastCapturingPieceValue;  // Go: + prevSee
+        n++;
+
+        // Remember the value of the capturing piece, and change the side to move
+        // before beginning the next iteration:
+        lastCapturingPieceValue = seeValues[pt]; // Go: prevSee := seeValue[pt)]
+        c = opposite_color(c);                  // Go: stm,opp = opp,stm   (Lägg sist i loop. Använd stm istf c)
+
+        // Stop after a king capture:
+        if (pt == KING && (attackers & this->pieces_of_color(c)))  //Go: använd opp istf c
+        {
+            swapList[n++] = 100; // maxEval
+            break;
+        }
+        // Go: stm,opp = opp,stm  (se ovan)
+    } while (attackers & this->pieces_of_color(c));
+
+    // Having built the swap list, we negamax through it to find the best
+    // achievable score from the point of view of the side to move:
+    while (--n)
+        swapList[n - 1] = Min(-swapList[n], swapList[n - 1]);
+
+    return swapList[0];
+}
