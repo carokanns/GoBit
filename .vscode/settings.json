@@ -11,7 +11,8 @@
     "**/*.jpg": true,
     "See_c": true,
     "_config.yml": true,
-    "diverese": true
+    "diverese": true,
+    ".gitignore": true
   },
   "cSpell.words": [
     "Pval",
