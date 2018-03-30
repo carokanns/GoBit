@@ -14,122 +14,124 @@ const (
 	BLACK    = color(1)
 	startpos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - "
 )
-var movesKnight[64] bitBoard
-var movesKings[64] bitBoard
+
+var atksKnights [64]bitBoard
+var atksKings [64]bitBoard
 
 // initialize all possible knight moves
-func initMovesKnights(){
-	toBB:=bitBoard(0)
-	for fr:=A1;fr<=H8;fr++{
+func initAtksKnights() {
+	toBB := bitBoard(0)
+	for fr := A1; fr <= H8; fr++ {
 		// NNE  2,1
-		rk:= fr/8
-		fl:=fr%8
-		if rk+2<8 && fl+1<8{
-			to:= uint((rk+2)*8+fl+1)
+		rk := fr / 8
+		fl := fr % 8
+		if rk+2 < 8 && fl+1 < 8 {
+			to := uint((rk+2)*8 + fl + 1)
 			toBB.set(to)
 		}
 
 		// ENE  1,2
-		if rk+1<8 && fl+2<8{
-			to:= uint((rk+1)*8+fl+2)
+		if rk+1 < 8 && fl+2 < 8 {
+			to := uint((rk+1)*8 + fl + 2)
 			toBB.set(to)
 		}
 
 		// ESE  -1,2
-		if rk-1>=0 && fl+2<8{
-			to:= uint((rk-1)*8+fl+2)
+		if rk-1 >= 0 && fl+2 < 8 {
+			to := uint((rk-1)*8 + fl + 2)
 			toBB.set(to)
 		}
 
 		// SSE  -2,+1
-		if rk-2>=0 && fl+1<8{
-			to:= uint((rk-2)*8+fl+1)
+		if rk-2 >= 0 && fl+1 < 8 {
+			to := uint((rk-2)*8 + fl + 1)
 			toBB.set(to)
 		}
 
 		// NNW  2,-1
-		if rk+2<8 && fl-1>=0{
-			to:= uint((rk+2)*8+fl-1)
+		if rk+2 < 8 && fl-1 >= 0 {
+			to := uint((rk+2)*8 + fl - 1)
 			toBB.set(to)
 		}
 
 		// WNW  1,-2
-		if rk+1<8 && fl-2>=0{
-			to:= uint((rk+1)*8+fl-2)
+		if rk+1 < 8 && fl-2 >= 0 {
+			to := uint((rk+1)*8 + fl - 2)
 			toBB.set(to)
 		}
-		
+
 		// WSW  -1,-2
-		if rk-1>=0 && fl-2>=0{
-			to:= uint((rk-1)*8+fl-2)
+		if rk-1 >= 0 && fl-2 >= 0 {
+			to := uint((rk-1)*8 + fl - 2)
 			toBB.set(to)
 		}
 
 		// SSW  -2,-1
-		if rk-2>=0 && fl-1>=0{
-			to:= uint((rk-2)*8+fl-1)
+		if rk-2 >= 0 && fl-1 >= 0 {
+			to := uint((rk-2)*8 + fl - 1)
 			toBB.set(to)
 		}
-		movesKnight[fr] = toBB
+		atksKnights[fr] = toBB
 	}
 }
 
 // initialize all possible King moves
-func initMovesKings(){
-	toBB:=bitBoard(0)
-	for fr:=A1;fr<=H8;fr++{
+func initAtksKings() {
+	toBB := bitBoard(0)
+	for fr := A1; fr <= H8; fr++ {
 		//N 1,0
-		rk:= fr/8
-		fl:=fr%8
-		if rk+1<8{
-			to:= uint((rk+1)*8+fl)
+		rk := fr / 8
+		fl := fr % 8
+		if rk+1 < 8 {
+			to := uint((rk+1)*8 + fl)
 			toBB.set(to)
 		}
 
 		//NE 1,1
-		if rk+1<8&&fl+1<8 {
-			to:= uint((rk+1)*8+fl+1)
+		if rk+1 < 8 && fl+1 < 8 {
+			to := uint((rk+1)*8 + fl + 1)
 			toBB.set(to)
 		}
-	
+
 		//E   0,1
-		if fl+1<8 {
-			to:= uint((rk)*8+fl+1)
+		if fl+1 < 8 {
+			to := uint((rk)*8 + fl + 1)
 			toBB.set(to)
 		}
 
 		//SE -1,1
-		if rk-1>=0 && fl+1<8 {
-			to:= uint((rk-1)*8+fl+1)
+		if rk-1 >= 0 && fl+1 < 8 {
+			to := uint((rk-1)*8 + fl + 1)
 			toBB.set(to)
 		}
 
 		//S  -1,0
-		if rk-1>=0  {
-			to:= uint((rk-1)*8+fl)
+		if rk-1 >= 0 {
+			to := uint((rk-1)*8 + fl)
 			toBB.set(to)
 		}
 
 		//SW -1,-1
-		if rk-1>=0 && fl-1>=0 {
-			to:= uint((rk-1)*8+fl-1)
+		if rk-1 >= 0 && fl-1 >= 0 {
+			to := uint((rk-1)*8 + fl - 1)
 			toBB.set(to)
 		}
 
 		//W   0,-1
-		if fl-1>=0 {
-			to:= uint((rk)*8+fl-1)
+		if fl-1 >= 0 {
+			to := uint((rk)*8 + fl - 1)
 			toBB.set(to)
 		}
 
 		//NW  1,-1
-		if rk+1<8 && fl-1>=0 {
-			to:= uint((rk+1)*8+fl-1)
+		if rk+1 < 8 && fl-1 >= 0 {
+			to := uint((rk+1)*8 + fl - 1)
 			toBB.set(to)
 		}
-		movesKings[fr]=toBB
+		atksKings[fr] = toBB
 	}
 }
+
 type boardStruct struct {
 	sq      [64]int
 	wbBB    [2]bitBoard
@@ -287,18 +289,16 @@ func (b *boardStruct) newGame() {
 }
 
 func (b *boardStruct) genRookMoves(ml *moveList, sd color) {
-	// TODO: generate rook moves with magic bitBoards - Benchmark
-
 	allRBB := b.pieceBB[Rook] & b.wbBB[sd]
 	p12 := uint(pc2P12(Rook, color(sd)))
 	ep := uint(b.ep)
-	castl := uint(b.castlings)
+	castlings := uint(b.castlings)
 	var mv move
 
 	for fr := allRBB.firstOne(); fr != 64; fr = allRBB.firstOne() {
 		toBB := mRookTab[fr].atks(b) & (^b.wbBB[sd])
 		for to := toBB.firstOne(); to != 64; to = toBB.firstOne() {
-			mv.packMove(uint(fr), uint(to), p12, uint(b.sq[to]), empty, ep, castl)
+			mv.packMove(uint(fr), uint(to), p12, uint(b.sq[to]), empty, ep, castlings)
 			ml.add(mv)
 		}
 	}
@@ -308,13 +308,12 @@ func (b *boardStruct) genBishopMoves(ml *moveList, sd color) {
 	allBBB := b.pieceBB[Bishop] & b.wbBB[sd]
 	p12 := uint(pc2P12(Bishop, color(sd)))
 	ep := uint(b.ep)
-	castl := uint(b.castlings)
+	castlings := uint(b.castlings)
 	var mv move
-
 	for fr := allBBB.firstOne(); fr != 64; fr = allBBB.firstOne() {
 		toBB := mBishopTab[fr].atks(b) & (^b.wbBB[sd])
 		for to := toBB.firstOne(); to != 64; to = toBB.firstOne() {
-			mv.packMove(uint(fr), uint(to), p12, uint(b.sq[to]), empty, ep, castl)
+			mv.packMove(uint(fr), uint(to), p12, uint(b.sq[to]), empty, ep, castlings)
 			ml.add(mv)
 		}
 	}
@@ -324,24 +323,64 @@ func (b *boardStruct) genQueenMoves(ml *moveList, sd color) {
 	allQBB := b.pieceBB[Queen] & b.wbBB[sd]
 	p12 := uint(pc2P12(Queen, color(sd)))
 	ep := uint(b.ep)
-	castl := uint(b.castlings)
+	castlings := uint(b.castlings)
 	var mv move
 
 	for fr := allQBB.firstOne(); fr != 64; fr = allQBB.firstOne() {
 		toBB := mBishopTab[fr].atks(b) & (^b.wbBB[sd])
 		toBB |= mRookTab[fr].atks(b) & (^b.wbBB[sd])
 		for to := toBB.firstOne(); to != 64; to = toBB.firstOne() {
-			mv.packMove(uint(fr), uint(to), p12, uint(b.sq[to]), empty, ep, castl)
+			mv.packMove(uint(fr), uint(to), p12, uint(b.sq[to]), empty, ep, castlings)
 			ml.add(mv)
 		}
 	}
 }
 
 func (b *boardStruct) genKnightMoves(ml *moveList, sd color) {
+	allNBB := b.pieceBB[Knight] & b.wbBB[sd]
+	p12 := uint(pc2P12(Knight, color(sd)))
+	ep := uint(b.ep)
+	castlings := uint(b.castlings)
+	var mv move
 
+	for fr := allNBB.firstOne(); fr != 64; fr = allNBB.firstOne() {
+		toBB := atksKnights[fr] & (^b.wbBB[sd])
+		for to := toBB.firstOne(); to != 64; to = toBB.firstOne() {
+			mv.packMove(uint(fr), uint(to), p12, uint(b.sq[to]), empty, ep, castlings)
+			ml.add(mv)
+		}
+	}
 }
 func (b *boardStruct) genKingMoves(ml *moveList, sd color) {
-	// castlings!
+	// 'normal' moves
+	allKBB := b.pieceBB[King] & b.wbBB[sd]
+	p12 := uint(pc2P12(King, color(sd)))
+	ep := uint(b.ep)
+	castlings := uint(b.castlings)
+	var mv move
+
+	for fr := allKBB.firstOne(); fr != 64; fr = allKBB.firstOne() {
+		toBB := atksKings[fr] & (^b.wbBB[sd])
+		for to := toBB.firstOne(); to != 64; to = toBB.firstOne() {
+			mv.packMove(uint(fr), uint(to), p12, uint(b.sq[to]), empty, ep, castlings)
+			ml.add(mv)
+		}
+	}
+
+	if b.King[sd] == castl[sd].king {
+		// short castling
+		if b.sq[castl[sd].rookSh] == castl[sd].rook {
+			// TODO: not in check and between not attacked
+			mv.packMove(uint(b.King[sd]), uint(b.King[sd]+2), uint(b.sq[b.King[sd]]), empty, empty, uint(b.ep), uint(b.castlings))
+			ml.add(mv)
+		}
+		// long castling
+		if b.sq[castl[sd].rookLong] == castl[sd].rook {
+			// TODO: not in check and between not attacked
+			mv.packMove(uint(b.King[sd]), uint(b.King[sd]-2), uint(b.sq[b.King[sd]]), empty, empty, uint(b.ep), uint(b.castlings))
+			ml.add(mv)
+		}
+	}
 }
 
 func (b *boardStruct) genPawnMoves(ml *moveList, sd color) {
@@ -889,12 +928,10 @@ const (
 
 //////////////////////////////// TODO: remove this ////////////////////////////////////////
 func (b *boardStruct) genSimpleRookMoves(ml *moveList, sd color) {
-	// TODO: generate rook moves with magic bitBoards - Benchmark
-
 	allRBB := b.pieceBB[Rook] & b.wbBB[sd]
 	p12 := uint(pc2P12(Rook, color(sd)))
 	ep := uint(b.ep)
-	castl := uint(b.castlings)
+	castlings := uint(b.castlings)
 	var mv move
 	for fr := allRBB.firstOne(); fr != 64; fr = allRBB.firstOne() {
 		rk := fr / 8
@@ -906,7 +943,7 @@ func (b *boardStruct) genSimpleRookMoves(ml *moveList, sd color) {
 			if cp != empty && p12Color(int(cp)) == sd {
 				break
 			}
-			mv.packMove(uint(fr), to, p12, cp, empty, ep, castl)
+			mv.packMove(uint(fr), to, p12, cp, empty, ep, castlings)
 			ml.add(mv)
 			if cp != empty {
 				break
@@ -919,7 +956,7 @@ func (b *boardStruct) genSimpleRookMoves(ml *moveList, sd color) {
 			if cp != empty && p12Color(int(cp)) == sd {
 				break
 			}
-			mv.packMove(uint(fr), to, p12, cp, empty, ep, castl)
+			mv.packMove(uint(fr), to, p12, cp, empty, ep, castlings)
 			ml.add(mv)
 			if cp != empty {
 				break
@@ -932,7 +969,7 @@ func (b *boardStruct) genSimpleRookMoves(ml *moveList, sd color) {
 			if cp != empty && p12Color(int(cp)) == sd {
 				break
 			}
-			mv.packMove(uint(fr), to, p12, cp, empty, ep, castl)
+			mv.packMove(uint(fr), to, p12, cp, empty, ep, castlings)
 			ml.add(mv)
 			if cp != empty {
 				break
@@ -945,7 +982,7 @@ func (b *boardStruct) genSimpleRookMoves(ml *moveList, sd color) {
 			if cp != empty && p12Color(int(cp)) == sd {
 				break
 			}
-			mv.packMove(uint(fr), to, p12, cp, empty, ep, castl)
+			mv.packMove(uint(fr), to, p12, cp, empty, ep, castlings)
 			ml.add(mv)
 			if cp != empty {
 				break
