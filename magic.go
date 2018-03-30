@@ -12,11 +12,9 @@ type sMagic struct {
 var mBishopTab [64]sMagic
 var mRookTab [64]sMagic
 
-func (m *sMagic) atks() bitBoard {
-	occ := board.allBB()
-	occ &= m.innerBB // mask occ with innerBB ->blockers
-	occ *= bitBoard(uint64(m.magic)) // * uint64(occ))
-	return m.toSqBB[int(occ>>m.shift)]
+// all attacks from current square
+func (m *sMagic) atks(b *boardStruct) bitBoard {
+	return m.toSqBB[int(((b.allBB() & m.innerBB)*bitBoard(m.magic)) >>m.shift)]
 }
 
 func initMagic() {

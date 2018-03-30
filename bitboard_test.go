@@ -52,3 +52,23 @@ func Test_bitBoard_firstOne(t *testing.T) {
 		})
 	}
 }
+func Test_bitBoard_lasttOne(t *testing.T) {
+	tests := []struct {
+		name string
+		b    bitBoard
+		want int
+	}{
+		{"",0x0,64},
+		{"",0x1,0},
+		{"",0xFFFFFFFFFFFFFFFF,63},
+		{"",0x00FFFFFFFFFFFFFF,55},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			x:=tt.b
+			if got := tt.b.lastOne(); got != tt.want {
+				t.Errorf("bitBoard.lastOne(%x) = %v, want %v", x,got, tt.want)
+			}
+		})
+	}
+}

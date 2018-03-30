@@ -116,3 +116,31 @@ func Test_castlings_String(t *testing.T) {
 		})
 	}
 }
+func Test_castlings_OnOff(t *testing.T) {
+	tests := []struct {
+		name string
+		c    castlings
+		on   bool
+		val  uint
+		want castlings
+	}{
+		{"", 0, false, longB, 0},
+		{"", 0, true, longB, castlings(longB)},
+		{"", castlings(shortW | longW | shortB | longB), true, shortW, castlings(shortW | longW | shortB | longB)},
+		{"", castlings(shortW | longW | shortB | longB), false, shortW, castlings(longW | shortB | longB)},
+		{"", castlings(shortW | longW | shortB | longB), true, shortW | longW, castlings(shortW | longW | shortB | longB)},
+		{"", castlings(shortW | longW | shortB | longB), false, shortW | longW, castlings(shortB | longB)},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.on {
+				tt.c.on(tt.val)
+			} else {
+				tt.c.off(tt.val)
+			}
+			if got := tt.c; got != tt.want {
+				t.Errorf("%v: want castlings = %v. Got %v", tt.name, tt.want, got)
+			}
+		})
+	}
+}
