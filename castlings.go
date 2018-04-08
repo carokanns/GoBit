@@ -9,18 +9,29 @@ const (
 	longW  = uint(0x2) // white can castle long
 	shortB = uint(0x4) // black can castle short
 	longB  = uint(0x8) // black can castle short
+
+	// squares between rook and king
+	betweenWSh = bitBoard(uint64(1)<<G1) | bitBoard(uint64(1)<<F1)
+	betweenWL  = bitBoard(uint64(1)<<B1) | bitBoard(uint64(1)<<C1) | bitBoard(uint64(1)<<D1)
+	betweenBSh = bitBoard(uint64(1)<<G8) | bitBoard(uint64(1)<<F8)
+	betweenBL  = bitBoard(uint64(1)<<B8) | bitBoard(uint64(1)<<C8) | bitBoard(uint64(1)<<D8)
 )
 
 type castlOptions struct {
-	short    uint
-	long     uint
-	rook	int
-	king    int
-	rookSh   uint
-	rookLong uint
+	short     uint
+	long      uint
+	rook      int
+	king      int
+	rookPosSh uint
+	rookPosL  uint
+	betweenSh bitBoard
+	betweenL  bitBoard
 }
 
-var castl = [2]castlOptions{{shortW, longW, wR,E1, H1, A1}, {shortB, longB,bR, E8, H8, A8}}
+var castl = [2]castlOptions{
+	{shortW, longW, wR, E1, H1, A1, betweenWSh, betweenWL},
+	{shortB, longB, bR, E8, H8, A8, betweenBSh, betweenBL},
+}
 
 // only castling privileges (not if it is legal on board)
 func (c castlings) canCastle(sd color) bool {

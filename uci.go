@@ -92,6 +92,7 @@ func handleNewgame() {
 
 func handlePosition(cmd string) {
 	// position [fen <fenstring> | startpos ]  moves <move1> .... <movei>
+	board.newGame()
 	cmd = trim(strings.TrimPrefix(cmd, "position"))
 	parts := strings.Split(cmd, "moves")
 	if len(cmd) == 0 || len(parts) > 2 {
@@ -114,12 +115,12 @@ func handlePosition(cmd string) {
 	// Now parts[0] is the fen-string only
 
 	// start the parsing
-	fmt.Printf("info string parse %#v\n", parts[0])
+	//fmt.Printf("info string parse %#v\n", parts[0])
 	parseFEN(parts[0])
 
 	if len(parts) == 2 {
 		parts[1] = low(trim(parts[1]))
-		fmt.Printf("info string parse %#v\n", parts[1])
+		//fmt.Printf("info string parse %#v\n", parts[1])
 		parseMvs(parts[1])
 	}
 }

@@ -12,6 +12,8 @@
     "See_c": true,
     "_config.yml": true,
     "diverese": true,
+    "pm.txt": true,
+    "engine-interface.txt": true,
     ".gitignore": true
   },
   "cSpell.words": [

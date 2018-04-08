@@ -14,14 +14,14 @@ var mRookTab [64]sMagic
 
 // all attacks from current square
 func (m *sMagic) atks(b *boardStruct) bitBoard {
-	return m.toSqBB[int(((b.allBB() & m.innerBB)*bitBoard(m.magic)) >>m.shift)]
+	return m.toSqBB[int(((b.allBB()&m.innerBB)*bitBoard(m.magic))>>m.shift)]
 }
 
 func initMagic() {
 	fmt.Println("starting init() for magic.go")
 
 	// bishops
-	fillOptimalMagicsB()
+	//fillOptimalMagicsB()
 	for sq := A1; sq <= H8; sq++ {
 		mBishopTab[sq].shift = uint(64 - nBBits[sq])
 		mBishopTab[sq].innerBB = bitBoard(innerBAtks(sq))
@@ -59,7 +59,7 @@ func prepareMagicB() {
 		// all bit combinations for fr and all possible blockers
 		cnt := bitCombs(0x0, fr, fr, 0, &maxM, &mBishopTab[fr], dirsB)
 		_ = cnt
-//		fmt.Println("bishop on", sq2Fen[fr], "#of combinations", cnt, "maxIx", maxM)
+		//		fmt.Println("bishop on", sq2Fen[fr], "#of combinations", cnt, "maxIx", maxM)
 	}
 }
 
@@ -71,7 +71,7 @@ func prepareMagicR() {
 		// all bit combinations for fr and all possible moves (toSqBB)
 		cnt := bitCombs(0x0, fr, fr, 0, &maxM, &mRookTab[fr], dirsR)
 		_ = cnt
-//		fmt.Println("rook on", sq2Fen[fr], "#of combinations", cnt, "maxIx", maxM)
+		//		fmt.Println("rook on", sq2Fen[fr], "#of combinations", cnt, "maxIx", maxM)
 	}
 }
 
@@ -96,7 +96,7 @@ func bitCombs(wBits bitBoard, fr, currSq, currIx int, maxM *int, mTabEntry *sMag
 		}
 		toBB := bitBoard(computeAtks(fr, dirs, uint64(wBits)))
 
-		if (*toSqBB)[int(m)] != 0x0 && (*toSqBB)[int(m)] != toBB && fr == F8 { // for bishop
+		if (*toSqBB)[int(m)] != 0x0 && (*toSqBB)[int(m)] != toBB { // for bishop
 			fmt.Println("we have problem", sq2Fen[fr], "with ix", int(m), "wBits:\n", bitBoard(wBits).Stringln())
 			fmt.Println((*toSqBB)[int(m)].Stringln())
 			fmt.Printf("%X\n", uint64((*toSqBB)[int(m)]))
@@ -251,7 +251,6 @@ func innerBAtks(sq int) uint64 {
 		r--
 		f++
 	}
-
 	return atkBB
 }
 
@@ -418,7 +417,7 @@ var nBBits = [64]int{
 // Thanks to Tord Romstad code from:
 // https://chessprogramming.wikispaces.com/Looking+for+Magics
 // This site will soon be closed down and moved somewhere else
-// Search for "Feeding in randoms Tord Romstad" 
+// Search for "Feeding in randoms Tord Romstad"
 
 var magicB = [64]uint64{
 	0xc085080200420200,
