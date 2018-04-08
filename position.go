@@ -255,7 +255,7 @@ func (b *boardStruct) move(fr, to, pr int) bool {
 		b.setSq(p12, to)
 	}
 
-	// TODO isInCheck() needs to be made (when move generation is finished)
+	// TODO isInCheck() needs to be here (when move generation is finished)
 	/*
 		if b.isInCheck(b.stm) {
 			b.stm = b.stm ^ 0x1
