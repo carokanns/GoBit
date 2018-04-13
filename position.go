@@ -30,7 +30,7 @@ const (
 var atksKnights [64]bitBoard
 var atksKings [64]bitBoard
 
-// initialize all possible knight moves
+// initialize all possible knight attacks
 func initAtksKnights() {
 	for fr := A1; fr <= H8; fr++ {
 		toBB := bitBoard(0)
@@ -87,8 +87,10 @@ func initAtksKnights() {
 	}
 }
 
-// initialize all possible King moves
+// initialize all possible King attacks
 func initAtksKings() {
+	fmt.Println("init atksKings")
+
 	for fr := A1; fr <= H8; fr++ {
 		toBB := bitBoard(0)
 		rk := fr / 8
@@ -153,7 +155,7 @@ type boardStruct struct {
 	castlings
 	stm    color
 	count  [12]int
-	rule50 int //set to 0 if pawn or capt nmove otherwise increment
+	rule50 int //set to 0 if a pawn or capt move otherwise increment
 }
 type color int
 
@@ -187,16 +189,18 @@ func (b *boardStruct) clear() {
 	}
 }
 
-// make a pseudomove
-func (b *boardStruct) move(fr, to, pr int) bool {
-
+// make a move
+func (b *boardStruct) move(mv move) bool {
 	newEp := 0
-	// we assume that the move is legally correct
+	// we assume that the move is legally correct (except inChekc())
+	fr := int(mv.fr())
+	to := int(mv.to())
+	pr := int(mv.pr())
 	p12 := b.sq[fr]
 	switch {
 	case p12 == wK:
 		b.castlings.off(shortW | longW)
-		if abs(to-fr) == 2 {
+		if abs(int(to)-int(fr)) == 2 {
 			if to == G1 {
 				b.setSq(wR, F1)
 				b.setSq(empty, H1)
@@ -207,7 +211,7 @@ func (b *boardStruct) move(fr, to, pr int) bool {
 		}
 	case p12 == bK:
 		b.castlings.off(shortB | longB)
-		if abs(to-fr) == 2 {
+		if abs(int(to)-int(fr)) == 2 {
 			if to == G8 {
 				b.setSq(bR, F8)
 				b.setSq(empty, H8)
@@ -255,23 +259,56 @@ func (b *boardStruct) move(fr, to, pr int) bool {
 		b.setSq(p12, to)
 	}
 
-	// TODO isInCheck() needs to be here (when move generation is finished)
-	/*
-		if b.isInCheck(b.stm) {
-			b.stm = b.stm ^ 0x1
-			return false
-		}
-	*/
 	b.stm = b.stm ^ 0x1
+	if b.isAttacked(b.King[b.stm ^0x1], b.stm) {
+		b.unmove(mv)
+		return false
+	}
+
 	return true
+}
+
+func (b *boardStruct) unmove(mv move) {
+	b.ep = int(mv.ep())
+	b.castlings = mv.castl()
+	p12 := int(mv.p12())
+	fr := int(mv.fr())
+	to := int(mv.to())
+	b.setSq(int(mv.cp()), to)
+	b.setSq(p12, fr)
+
+	if piece(p12) == Pawn {
+		if to == b.ep { // ep move
+			b.setSq(empty, to)
+			switch fr - to {
+			case NW, NE:
+				b.setSq(bP, to-N)
+			case SW, SE:
+				b.setSq(wP, to-S)
+			}
+		}
+	} else if piece(p12) == King {
+		sd := p12Color(p12)
+		if fr-to == 2 { // long castling
+			b.setSq(castl[sd].rook, int(castl[sd].rookL))
+			b.setSq(empty, fr-1)
+		} else if fr-to == -2 { // short castling
+			b.setSq(castl[sd].rook, int(castl[sd].rookSh))
+			b.setSq(empty, fr+1)
+		}
+	}
+	b.stm = b.stm ^ 0x1
 }
 
 func (b *boardStruct) setSq(p12, sq int) {
 	p := piece(p12)
 	sd := p12Color(p12)
 
-	if b.sq[sq] != empty {
-		b.count[b.sq[sq]]--
+	if b.sq[sq] != empty { // capture
+		cp := b.sq[sq]
+		b.count[cp]--
+		b.wbBB[sd^0x1].clr(uint(sq))
+		b.pieceBB[piece(cp)].clr(uint(sq))
 	}
 	b.sq[sq] = p12
 
@@ -300,7 +337,8 @@ func (b *boardStruct) newGame() {
 	parseFEN(startpos)
 }
 
-func (b *boardStruct) genRookMoves(ml *moveList, sd color) {
+func (b *boardStruct) genRookMoves(ml *moveList) {
+	sd := b.stm
 	allRBB := b.pieceBB[Rook] & b.wbBB[sd]
 	p12 := uint(pc2P12(Rook, color(sd)))
 	var mv move
@@ -313,7 +351,8 @@ func (b *boardStruct) genRookMoves(ml *moveList, sd color) {
 	}
 }
 
-func (b *boardStruct) genBishopMoves(ml *moveList, sd color) {
+func (b *boardStruct) genBishopMoves(ml *moveList) {
+	sd := b.stm
 	allBBB := b.pieceBB[Bishop] & b.wbBB[sd]
 	p12 := uint(pc2P12(Bishop, color(sd)))
 	ep := uint(b.ep)
@@ -329,7 +368,8 @@ func (b *boardStruct) genBishopMoves(ml *moveList, sd color) {
 	}
 }
 
-func (b *boardStruct) genQueenMoves(mlq *moveList, sd color) {
+func (b *boardStruct) genQueenMoves(mlq *moveList) {
+	sd := b.stm
 	allQBB := b.pieceBB[Queen] & b.wbBB[sd]
 	p12 := uint(pc2P12(Queen, color(sd)))
 	ep := uint(b.ep)
@@ -346,7 +386,8 @@ func (b *boardStruct) genQueenMoves(mlq *moveList, sd color) {
 	}
 }
 
-func (b *boardStruct) genKnightMoves(ml *moveList, sd color) {
+func (b *boardStruct) genKnightMoves(ml *moveList) {
+	sd:=b.stm
 	allNBB := b.pieceBB[Knight] & b.wbBB[sd]
 	p12 := uint(pc2P12(Knight, color(sd)))
 	ep := uint(b.ep)
@@ -361,44 +402,123 @@ func (b *boardStruct) genKnightMoves(ml *moveList, sd color) {
 	}
 }
 
-func (b *boardStruct) genKingMoves(ml *moveList, sd color) {
+func (b *boardStruct) genKingMoves(ml *moveList) {
+	sd:=b.stm
 	// 'normal' moves
-	allKBB := b.pieceBB[King] & b.wbBB[sd]
 	p12 := uint(pc2P12(King, color(sd)))
 	ep := uint(b.ep)
 	castlings := uint(b.castlings)
 	var mv move
 
-	for fr := allKBB.firstOne(); fr != 64; fr = allKBB.firstOne() {
-		toBB := atksKings[fr] & (^b.wbBB[sd])
-		for to := toBB.firstOne(); to != 64; to = toBB.firstOne() {
-			mv.packMove(uint(fr), uint(to), p12, uint(b.sq[to]), empty, ep, castlings)
-			ml.add(mv)
-		}
+	toBB := atksKings[b.King[sd]] & (^b.wbBB[sd])
+	for to := toBB.firstOne(); to != 64; to = toBB.firstOne() {
+		mv.packMove(uint(b.King[sd]), uint(to), p12, uint(b.sq[to]), empty, ep, castlings)
+		ml.add(mv)
 	}
 
-	if b.King[sd] == castl[sd].king {
+	if b.King[sd] == castl[sd].kingPos { // NOTE: Maybe not needed. We should know that the king is there if the flags are ok
 		// short castling
-		if b.sq[castl[sd].rookPosSh] == castl[sd].rook && (castl[sd].betweenSh&b.allBB()) == 0 {
-			// TODO: not in check and between not attacked
-			mv.packMove(uint(b.King[sd]), uint(b.King[sd]+2), uint(b.sq[b.King[sd]]), empty, empty, uint(b.ep), uint(b.castlings))
-			ml.add(mv)
+		if b.sq[castl[sd].rookSh] == castl[sd].rook && // NOTE: Maybe not needed. We should know that the rook is there if the flags are ok
+			(castl[sd].betweenSh&b.allBB()) == 0 {
+			if b.castlingShOk(sd) {
+				// TODO: not in check and between not attacked
+				mv.packMove(uint(b.King[sd]), uint(b.King[sd]+2), uint(b.sq[b.King[sd]]), empty, empty, uint(b.ep), uint(b.castlings))
+				ml.add(mv)
+			}
 		}
+
 		// long castling
-		if b.sq[castl[sd].rookPosL] == castl[sd].rook && (castl[sd].betweenL&b.allBB()) == 0 {
+		if b.sq[castl[sd].rookL] == castl[sd].rook && // NOTE: Maybe not needed. We should know that the rook is there if the flags are ok
+			(castl[sd].betweenL&b.allBB()) == 0 {
 			// TODO: not in check and between not attacked
-			mv.packMove(uint(b.King[sd]), uint(b.King[sd]-2), uint(b.sq[b.King[sd]]), empty, empty, uint(b.ep), uint(b.castlings))
-			ml.add(mv)
+			if b.castlingLOk(sd) {
+				mv.packMove(uint(b.King[sd]), uint(b.King[sd]-2), uint(b.sq[b.King[sd]]), empty, empty, uint(b.ep), uint(b.castlings))
+				ml.add(mv)
+			}
 		}
 	}
 }
 
-var genPawns = [2]func(*boardStruct, *moveList, color){(*boardStruct).genWPawnMoves, (*boardStruct).genBPawnMoves}
+// check if short castlings is legal
+func (b *boardStruct) castlingShOk(sd color) bool {
+	opp := sd ^ 0x1
+	if castl[sd].pawnsSh&b.pieceBB[Pawn]&b.wbBB[opp] != 0 {
+		return false
+	}
+	if castl[sd].pawnsSh&b.pieceBB[King]&b.wbBB[opp] != 0 {
+		return false
+	}
+	if castl[sd].knightsSh&b.pieceBB[Knight]&b.wbBB[opp] != 0 {
+		return false
+	}
 
-func (b *boardStruct) genPawnMoves(ml *moveList, sd color) {
-	genPawns[sd](b, ml, sd)
+	// sliding e1/e8	//NOTE: Maybe not needed during search because we know if we are in check
+	sq := b.King[sd]
+	if (mBishopTab[sq].atks(b) & (b.pieceBB[Bishop] | b.pieceBB[Queen]) & b.wbBB[opp]) != 0 {
+		return false
+	}
+	if (mRookTab[sq].atks(b) & (b.pieceBB[Rook] | b.pieceBB[Queen]) & b.wbBB[opp]) != 0 {
+		return false
+	}
+
+	// sliding f1/f8
+	if (mBishopTab[sq+1].atks(b) & (b.pieceBB[Bishop] | b.pieceBB[Queen]) & b.wbBB[opp]) != 0 {
+		return false
+	}
+	if (mRookTab[sq+1].atks(b) & (b.pieceBB[Rook] | b.pieceBB[Queen]) & b.wbBB[opp]) != 0 {
+		return false
+	}
+
+	// sliding g1/g8		//NOTE: Maybe not needed because we always make inCheck() before a move
+	if (mBishopTab[sq+2].atks(b) & (b.pieceBB[Bishop] | b.pieceBB[Queen]) & b.wbBB[opp]) != 0 {
+		return false
+	}
+	if (mRookTab[sq+2].atks(b) & (b.pieceBB[Rook] | b.pieceBB[Queen]) & b.wbBB[opp]) != 0 {
+		return false
+	}
+	return true
 }
-func (b *boardStruct) genWPawnMoves(ml *moveList, sd color) {
+
+// check if long castlings is legal
+func (b *boardStruct) castlingLOk(sd color) bool {
+	opp := sd ^ 0x1
+	if castl[sd].knightsL&b.pieceBB[Knight]&b.wbBB[opp] != 0 {
+		return false
+	}
+
+	// sliding e1/e8
+	sq := b.King[sd]
+	if (mBishopTab[sq].atks(b) & (b.pieceBB[Bishop] | b.pieceBB[Queen]) & b.wbBB[opp]) != 0 {
+		return false
+	}
+	if (mRookTab[sq].atks(b) & (b.pieceBB[Rook] | b.pieceBB[Queen]) & b.wbBB[opp]) != 0 {
+		return false
+	}
+
+	// sliding d1/d8
+	if (mBishopTab[sq-1].atks(b) & (b.pieceBB[Bishop] | b.pieceBB[Queen]) & b.wbBB[opp]) != 0 {
+		return false
+	}
+	if (mRookTab[sq-1].atks(b) & (b.pieceBB[Rook] | b.pieceBB[Queen]) & b.wbBB[opp]) != 0 {
+		return false
+	}
+
+	// sliding c1/c8	//NOTE: Maybe not needed because we always make inCheck() before a move
+	if (mBishopTab[sq-2].atks(b) & (b.pieceBB[Bishop] | b.pieceBB[Queen]) & b.wbBB[opp]) != 0 {
+		return false
+	}
+	if (mRookTab[sq-2].atks(b) & (b.pieceBB[Rook] | b.pieceBB[Queen]) & b.wbBB[opp]) != 0 {
+		return false
+	}
+	return true
+}
+
+var genPawns = [2]func(*boardStruct, *moveList){(*boardStruct).genWPawnMoves, (*boardStruct).genBPawnMoves}
+
+func (b *boardStruct) genPawnMoves(ml *moveList) {
+	genPawns[b.stm](b, ml)
+}
+func (b *boardStruct) genWPawnMoves(ml *moveList) {
 	var mv move
 	wPawns := b.pieceBB[Pawn] & b.wbBB[WHITE]
 
@@ -495,7 +615,7 @@ func (b *boardStruct) genWPawnMoves(ml *moveList, sd color) {
 	}
 }
 
-func (b *boardStruct) genBPawnMoves(ml *moveList, sd color) {
+func (b *boardStruct) genBPawnMoves(ml *moveList) {
 	var mv move
 	bPawns := b.pieceBB[Pawn] & b.wbBB[BLACK]
 
@@ -590,33 +710,96 @@ func (b *boardStruct) genBPawnMoves(ml *moveList, sd color) {
 	}
 }
 
-func (b *boardStruct) genAllMoves(ml *moveList, sd color) {
-	b.genPawnMoves(ml, sd)
-	b.genKnightMoves(ml, sd)
-	b.genBishopMoves(ml, sd)
-	b.genRookMoves(ml, sd)
-	b.genQueenMoves(ml, sd)
-	b.genKingMoves(ml, sd)
+// generates pseudolegal moves (without inCheck() )
+func (b *boardStruct) genAllMoves(ml *moveList) {
+	b.genPawnMoves(ml)
+	b.genKnightMoves(ml)
+	b.genBishopMoves(ml)
+	b.genRookMoves(ml)
+	b.genQueenMoves(ml)
+	b.genKingMoves(ml)
+
+	//
+	b.filterLegals(ml)
+}
+
+// generate all legal moves
+func (b *boardStruct) filterLegals(ml *moveList) {
+	for ix:=len(*ml)-1;ix >=0;ix--{
+		mov := (*ml)[ix]
+		if b.move(mov) {
+			b.unmove(mov)
+		} else {
+			ml.remove(ix)
+		}
+	}
 }
 
 func (b *boardStruct) genFrMoves(p12 int, toBB bitBoard, ml *moveList) {
 
 }
 
+// is sq attacked by the sd color side
+func (b *boardStruct) isAttacked(sq int, sd color) bool {
+	// TODO: Fixar inte alla attacker både true och false
+	if pawnAtks[sd](b, sq) {
+		return true
+	}
+
+	if atksKnights[sq]&b.pieceBB[Knight]&b.wbBB[sd] != 0 {
+		return true
+	}
+	if atksKings[sq]&b.pieceBB[King]&b.wbBB[sd] != 0 {
+		return true
+	}
+	if (mBishopTab[sq].atks(b) & (b.pieceBB[Bishop] | b.pieceBB[Queen]) & b.wbBB[sd]) != 0 {
+		return true
+	}
+	if (mRookTab[sq].atks(b) & (b.pieceBB[Rook] | b.pieceBB[Queen]) & b.wbBB[sd]) != 0 {
+		return true
+	}
+
+	return false
+}
+
+var pawnAtks = [2]func(*boardStruct, int) bool{(*boardStruct).wPawnAtks, (*boardStruct).bPawnAtks}
+
+func (b *boardStruct) wPawnAtks(sq int) bool {
+	sqBB := bitBoard(1) << uint(sq)
+
+	wPawns := b.pieceBB[Pawn] & b.wbBB[WHITE]
+
+	// Attacks left and right
+	toCap := ((wPawns & ^fileA) << NW) & b.wbBB[BLACK]
+	toCap |= ((wPawns & ^fileH) << NE) & b.wbBB[BLACK]
+	if toCap&sqBB == 0 {
+		return false
+	}
+	return true
+}
+func (b *boardStruct) bPawnAtks(sq int) bool {
+	sqBB := bitBoard(1) << uint(sq)
+
+	bPawns := b.pieceBB[Pawn] & b.wbBB[BLACK]
+
+	// Attacks left and right
+	toCap := ((bPawns & ^fileA) >> (-SW)) & b.wbBB[WHITE]
+	toCap |= ((bPawns & ^fileH) >> (-SE)) & b.wbBB[WHITE]
+
+	if toCap&sqBB == 0 {
+		return false
+	}
+	return true
+}
+
 //////////////////////////////////// my own commands - NOT UCI /////////////////////////////////////
 
-func (b *boardStruct) printAllMvs() {
-
+// print all legal moves
+func (b *boardStruct) printAllLegals() {
+	// TODO: det blir felaktigheter från inCheck() move eller unmove
 	var ml moveList
-	b.genAllMoves(&ml, b.stm)
+	b.genAllMoves(&ml)
 	fmt.Println(ml.String())
-
-	/*
-		var ml1 moveList
-		fmt.Println("simple")
-		board.genRookMoves(&ml1, b.stm)
-		fmt.Println(ml1.String())
-	*/
 }
 
 func (b *boardStruct) Print() {
@@ -813,14 +996,21 @@ func parseMvs(mvstr string) {
 		// is the prom piece ok?
 		pr := empty
 		if len(mv) == 5 { //prom
-			if !strings.ContainsAny(mv[4:5], "QRNB") {
+			if !strings.ContainsAny(mv[4:5], "QRNBqrnb") {
 				tell("info string promotion piece in ", mv, " in the position command is not correct")
 				return
 			}
 			pr = fen2Int(mv[4:5])
 			pr = pc2P12(pr, board.stm)
 		}
-		board.move(fr, to, pr)
+		cp := board.sq[to]
+
+		var intMv move // internal move format
+		intMv.packMove(uint(fr), uint(to), uint(p12), uint(cp), uint(pr), uint(board.ep), uint(board.castlings))
+
+		if !board.move(intMv){
+			tell(fmt.Sprintf("tell info string %v-%v is an illegal move", sq2Fen[fr], sq2Fen[to]) )
+		}
 	}
 }
 

@@ -77,3 +77,26 @@ func Test_move_packMove(t *testing.T) {
 		})
 	}
 }
+
+func Test_moveList_remove(t *testing.T) {
+	tests := []struct {
+		name string
+		cnt int
+		ix int
+	}{
+		{"5 3",5,3},
+		{"5 0",5,0},
+		{"5 4",5,4},
+		{"1 0",1,0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var ml   moveList
+			for i :=0;i<tt.cnt;i++{ml.add(move(i))}
+			ml.remove(tt.ix)
+			if len(ml) != tt.cnt-1{
+				t.Errorf("%v: we should have %v moves but have %v",tt.name,tt.cnt-1,len(ml))
+			}
+		})
+	}
+}

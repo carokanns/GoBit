@@ -4,7 +4,6 @@
     "design.png": true,
     "**/*.exe": true,
     "**/*.png": true,
-    "temp.go": true,
     "README.md": true,
     "LICENSE": true,
     "uci_example.txt": true,
@@ -13,7 +12,6 @@
     "_config.yml": true,
     "diverese": true,
     "pm.txt": true,
-    "engine-interface.txt": true,
     ".gitignore": true
   },
   "cSpell.words": [

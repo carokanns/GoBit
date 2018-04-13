@@ -63,7 +63,7 @@ func uci(input chan string) {
 		case "pbb":
 			board.printAllBB()
 		case "pm":
-			board.printAllMvs()
+			board.printAllLegals()
 		default:
 			tell("info string unknown cmd ", cmd)
 		}
@@ -71,7 +71,6 @@ func uci(input chan string) {
 
 	tell("info string leaving uci()")
 }
-
 
 func handleUci() {
 	tell("id name GoBit")

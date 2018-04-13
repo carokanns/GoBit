@@ -13,5 +13,6 @@ func init(){
 	initMagic()
 	initAtksKings()
 	initAtksKnights()
+	initCastlings()
 	board.newGame()
 }

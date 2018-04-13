@@ -32,13 +32,6 @@ const (
 
 var pieceRules [nP][]int // not pawns
 
-func init() {
-	pieceRules[Rook] = append(pieceRules[Rook], E)
-	pieceRules[Rook] = append(pieceRules[Rook], W)
-	pieceRules[Rook] = append(pieceRules[Rook], N)
-	pieceRules[Rook] = append(pieceRules[Rook], S)
-}
-
 type move uint64
 
 func (m move) String() string {
@@ -54,7 +47,6 @@ func (m move) StringFull() string {
 	pr := int2Fen(int(m.pr()))
 	return fmt.Sprintf("%v%v-%v%v%v", p, fr, cp[:1], to, pr)
 }
-
 
 func (m *move) packMove(fr, to, p12, cp, pr, epSq, castl uint) {
 	// 6 bits fr, 6 bits to, 4 bits p12, 4 bits cp, 4 bits prom, 4 bits ep, 4 bits castl = 32 bits
@@ -87,13 +79,20 @@ func (m move) castl() castlings {
 
 type moveList []move
 
-func (mvs *moveList) add(mv move) {
-	*mvs = append(*mvs, mv)
+func (ml *moveList) add(mv move) {
+	*ml = append(*ml, mv)
 }
 
-func (mvs moveList) String() string {
+func (ml *moveList) remove(ix int){
+	if len(*ml) > ix && ix >=0{
+		*ml = append((*ml)[:ix],(*ml)[ix+1:]...)
+	}
+}
+
+
+func (ml moveList) String() string {
 	theString := ""
-	for _, mv := range mvs {
+	for _, mv := range ml {
 		theString += mv.String() + " "
 	}
 	return theString
