@@ -12,7 +12,8 @@
     "_config.yml": true,
     "diverese": true,
     "pm.txt": true,
-    ".gitignore": true
+    ".gitignore": true,
+    "engine-interface.txt": true
   },
   "cSpell.words": [
     "Pval",

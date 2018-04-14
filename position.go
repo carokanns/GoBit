@@ -421,7 +421,6 @@ func (b *boardStruct) genKingMoves(ml *moveList) {
 		if b.sq[castl[sd].rookSh] == castl[sd].rook && // NOTE: Maybe not needed. We should know that the rook is there if the flags are ok
 			(castl[sd].betweenSh&b.allBB()) == 0 {
 			if b.castlingShOk(sd) {
-				// TODO: not in check and between not attacked
 				mv.packMove(uint(b.King[sd]), uint(b.King[sd]+2), uint(b.sq[b.King[sd]]), empty, empty, uint(b.ep), uint(b.castlings))
 				ml.add(mv)
 			}
@@ -430,7 +429,6 @@ func (b *boardStruct) genKingMoves(ml *moveList) {
 		// long castling
 		if b.sq[castl[sd].rookL] == castl[sd].rook && // NOTE: Maybe not needed. We should know that the rook is there if the flags are ok
 			(castl[sd].betweenL&b.allBB()) == 0 {
-			// TODO: not in check and between not attacked
 			if b.castlingLOk(sd) {
 				mv.packMove(uint(b.King[sd]), uint(b.King[sd]-2), uint(b.sq[b.King[sd]]), empty, empty, uint(b.ep), uint(b.castlings))
 				ml.add(mv)
@@ -741,7 +739,6 @@ func (b *boardStruct) genFrMoves(p12 int, toBB bitBoard, ml *moveList) {
 
 // is sq attacked by the sd color side
 func (b *boardStruct) isAttacked(sq int, sd color) bool {
-	// TODO: Fixar inte alla attacker både true och false
 	if pawnAtks[sd](b, sq) {
 		return true
 	}
@@ -796,7 +793,6 @@ func (b *boardStruct) bPawnAtks(sq int) bool {
 
 // print all legal moves
 func (b *boardStruct) printAllLegals() {
-	// TODO: det blir felaktigheter från inCheck() move eller unmove
 	var ml moveList
 	b.genAllMoves(&ml)
 	fmt.Println(ml.String())
@@ -1053,6 +1049,8 @@ func p12Color(p12 int) color {
 func pc2P12(pc int, sd color) int {
 	return (pc << 1) | int(sd)
 }
+
+
 
 // map fen-sq to int
 var fenSq2Int = make(map[string]int)
