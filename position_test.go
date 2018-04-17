@@ -93,7 +93,7 @@ func Test_move(t *testing.T) {
 
 
 func Test_unmove(t *testing.T) {
-	type movStr struct{ fr, to, p12, cp, pr uint }
+	type movStr struct{ fr, to, p12, cp, pr int }
 	tests := []struct {
 		name   string
 		pos    string
@@ -107,7 +107,7 @@ func Test_unmove(t *testing.T) {
 	for _, tt := range tests {
 		handlePosition(tt.pos)
 		var mv move
-		mv.packMove(tt.mov.fr, tt.mov.to, tt.mov.p12, tt.mov.cp, tt.mov.pr, uint(board.ep), uint(board.castlings))
+		mv.packMove(tt.mov.fr, tt.mov.to, tt.mov.p12, tt.mov.cp, tt.mov.pr, board.ep, board.castlings)
 		board.unmove(mv)
 		if int(tt.mov.p12) != board.sq[tt.mov.fr] {
 			t.Errorf("%v: fr_sq should have %v (%v) but have %v", tt.name, int2Fen(int(tt.mov.p12)), tt.mov.p12, board.sq[tt.mov.fr])
@@ -169,10 +169,10 @@ func Test_setSq(t *testing.T) {
 			}
 			pc := piece(tt.p12)
 			sd := p12Color(tt.p12)
-			if !board.wbBB[sd].test(uint(tt.sq)) {
+			if !board.wbBB[sd].test(tt.sq) {
 				t.Errorf("%v: wbBB[%v] on sq=%v should be set to 1 but is 0", tt.name, sd, tt.sq)
 			}
-			if !board.pieceBB[pc].test(uint(tt.sq)) {
+			if !board.pieceBB[pc].test(tt.sq) {
 				t.Errorf("%v: pieceBB[%v] on sq=%v should be set to 1 but is 0", tt.name, pc, tt.sq)
 			}
 			if board.count[tt.p12] != count+1 {
@@ -290,8 +290,10 @@ func Test_genKingMoves(t *testing.T) {
 	}{
 		{"startpos", "position startpos", []string{}, 0},
 		{"e1d1", "position startpos moves d2d3 d7d6 d1d2 d8d7", []string{"e1d1"}, 1},
-		{"short W", "position startpos moves e2e4 e7e5 g1f3 g8f6 f1c4 f8c5 e1f1 c5f8 f1e1 f8c5",
-			[]string{"e1g1", "e1e2", "e1f1"}, 3},
+		{"short W k moved", "position startpos moves e2e4 e7e5 g1f3 g8f6 f1c4 f8c5 e1f1 c5f8 f1e1 f8c5",
+			[]string{ "e1e2", "e1f1"}, 2},
+		{"short W", "position startpos moves e2e4 e7e5 g1f3 g8f6 f1c4 f8c5 ",
+			[]string{ "e1g1 e1e2", "e1f1"}, 3},
 		{"short B", "position startpos moves e2e4 e7e5 g1f3 g8f6 f1c4 f8c5 b1c3",
 			[]string{"e8g8", "e8e7", "e8f8"}, 3},
 		{"Short check W", "position startpos moves e2e4 e7e5 g1f3 d8g5 f1c4 g5g2",
@@ -454,10 +456,10 @@ func findMoves(mlf *moveList, mvs []string) (bool, move) {
 	found := false
 	var mv1 move
 	for _, mvStr := range mvs {
-		fr := uint(fenSq2Int[mvStr[:2]])
-		to := uint(fenSq2Int[mvStr[2:4]])
+		fr := fenSq2Int[mvStr[:2]]
+		to := fenSq2Int[mvStr[2:4]]
 		cp := board.sq[to]
-		if cp == empty && (board.sq[fr] == wP || board.sq[fr] == bP) && to == uint(board.ep) { // ep
+		if cp == empty && (board.sq[fr] == wP || board.sq[fr] == bP) && to == board.ep { // ep
 			cp = wP
 			if board.sq[fr] == wP {
 				cp = bP
@@ -468,7 +470,7 @@ func findMoves(mlf *moveList, mvs []string) (bool, move) {
 			pr = fen2Int(mvStr[4:5])
 		}
 
-		mv1.packMove(fr, to, uint(board.sq[fr]), uint(cp), uint(pr), uint(board.ep), uint(board.castlings))
+		mv1.packMove(fr, to, board.sq[fr], cp, pr, board.ep, board.castlings)
 		found = false
 		for _, mv2 := range *mlf {
 			if mv1 == mv2 {

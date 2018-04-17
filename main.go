@@ -14,5 +14,6 @@ func init(){
 	initAtksKings()
 	initAtksKnights()
 	initCastlings()
+	pSqInit()
 	board.newGame()
 }

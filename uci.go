@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strconv"
 	"bufio"
 	"fmt"
 	"io"
@@ -18,7 +19,6 @@ func uci(input chan string) {
 	fmt.Println("info string Hello from uci")
 
 	toEng, frEng := engine()
-	bInfinite := false
 	var cmd string
 	var bm string
 	quit := false
@@ -27,7 +27,7 @@ func uci(input chan string) {
 		case cmd = <-input:
 			//			tell("info string uci got ", cmd, "\n")
 		case bm = <-frEng:
-			handleBm(bm, bInfinite)
+			handleBm(bm)
 			continue
 		}
 		words := strings.Split(cmd, " ")
@@ -49,13 +49,13 @@ func uci(input chan string) {
 		case "register":
 			handleRegister(words)
 		case "go":
-			handleGo(words)
+			handleGo(toEng,words)
 		case "ponderhit":
 			handlePonderhit()
 		case "stop":
-			handleStop(toEng, &bInfinite)
+			handleStop(toEng)
 		case "quit", "q":
-			handleQuit(toEng)
+			handleQuit()
 			quit = true
 			continue
 		case "pb":
@@ -124,26 +124,25 @@ func handlePosition(cmd string) {
 	}
 }
 
-func handleStop(toEng chan string, bInfinite *bool) {
-	if *bInfinite {
+func handleStop(toEng chan bool) {
+	if limits.infinite {
 		if saveBm != "" {
 			tell(saveBm)
 			saveBm = ""
 		}
 
-		toEng <- "stop"
-		*bInfinite = false
+		limits.setStop(true)
+		limits.setInfinite(false)
 	}
-	tell("info string stop not implemented")
 }
 
 // handleQuit not really necessary
-func handleQuit(toEng chan string) {
-	toEng <- "stop"
+func handleQuit() {
+	
 }
 
-func handleBm(bm string, bInfinite bool) {
-	if bInfinite {
+func handleBm(bm string) {
+	if limits.infinite {
 		saveBm = bm
 		return
 	}
@@ -158,8 +157,9 @@ func handleSetOption(words []string) {
 
 // go  searchmoves <move1-moveii>/ponder/wtime <ms>/ btime <ms>/winc <ms>/binc <ms>/movestogo <x>/
 //     depth <x>/nodes <x>/movetime <ms>/mate <x>/infinite
-func handleGo(words []string) {
+func handleGo(toEng chan bool, words []string) {
 	// TODO: Start with moveTime and infinite
+	limits.init()
 	if len(words) > 1 {
 		words[1] = trim(low(words[1]))
 		switch words[1] {
@@ -182,11 +182,18 @@ func handleGo(words []string) {
 		case "nodes":
 			tell("info string go nodes not implemented")
 		case "movetime":
-			tell("info string go movetime not implemented")
+			mt,err := strconv.Atoi(words[2])
+			if err!=nil{
+				tell("info string ",words[2]," not numeric")
+				return
+			}
+			limits.setMoveTime(mt)
+			toEng<-true
 		case "mate": // mate <x>  mate in x moves
 			tell("info string go mate not implemented")
 		case "infinite":
-			tell("info string go infinite not implemented")
+			limits.setInfinite(true)
+			toEng<-true
 		case "register":
 			tell("info string go register not implemented")
 		default:

@@ -48,30 +48,36 @@ func (m move) StringFull() string {
 	return fmt.Sprintf("%v%v-%v%v%v", p, fr, cp[:1], to, pr)
 }
 
-func (m *move) packMove(fr, to, p12, cp, pr, epSq, castl uint) {
+func (m *move) packMove(fr, to, p12, cp, pr, epSq int, castl castlings) {
 	// 6 bits fr, 6 bits to, 4 bits p12, 4 bits cp, 4 bits prom, 4 bits ep, 4 bits castl = 32 bits
 	*m = move(fr | (to << toShift) | (p12 << p12Shift) |
-		(cp << cpShift) | (pr << prShift) | (epSq << epShift) | (castl << castlShift))
+		(cp << cpShift) | (pr << prShift) | (epSq << epShift) | int(castl << castlShift) )
+}
+func (m *move) packEval(score int) {
+	(*m) |= move(score + 30000) << evalShift
 }
 
-func (m move) fr() uint {
-	return uint(m & frMask)
+func (m move) eval() int {
+	return int((uint(m) & uint(evalMask)) >>evalShift) -30000
 }
-func (m move) to() uint {
-	return uint(m&toMask) >> toShift
+func (m move) fr() int {
+	return int(m & frMask)
+}
+func (m move) to() int {
+	return int(m&toMask) >> toShift
 }
 
-func (m move) p12() uint {
-	return uint(m&p12Mask) >> p12Shift
+func (m move) p12() int {
+	return int(m&p12Mask) >> p12Shift
 }
-func (m move) cp() uint {
-	return uint(m&cpMask) >> cpShift
+func (m move) cp() int {
+	return int(m&cpMask) >> cpShift
 }
-func (m move) pr() uint {
-	return uint(m&prMask) >> prShift
+func (m move) pr() int {
+	return int(m&prMask) >> prShift
 }
-func (m move) ep() uint {
-	return uint(m&epMask) >> epShift
+func (m move) ep() int {
+	return int(m&epMask) >> epShift
 }
 func (m move) castl() castlings {
 	return castlings(m&castlMask) >> castlShift
@@ -89,6 +95,19 @@ func (ml *moveList) remove(ix int){
 	}
 }
 
+// Sort is sorting the moves in the Score/Move list according to the score per move
+func (ml *moveList) sort(){
+	bSwap := true
+	for bSwap {
+		bSwap = false
+		for i := 0; i < len(*ml)-1; i++ {
+			if (*ml)[i+1].eval() > (*ml)[i].eval() {
+				(*ml)[i],(*ml)[i+1] = (*ml)[i+1], (*ml)[i]
+				bSwap = true
+			}
+		}
+	}
+}
 
 func (ml moveList) String() string {
 	theString := ""

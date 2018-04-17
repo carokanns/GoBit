@@ -109,13 +109,13 @@ func bitCombs(wBits bitBoard, fr, currSq, currIx int, maxM *int, mTabEntry *sMag
 	// 1
 	//
 	//						wBits |= (uint64(1) << uint(currSq))
-	wBits.set(uint(currSq))
+	wBits.set(currSq)
 	cnt += bitCombs(wBits, fr, currSq, currIx, maxM, mTabEntry, dirs)
 
 	// 0
 	//
 	//						wBits &= ^(uint64(1) << uint(currSq))
-	wBits.clr(uint(currSq))
+	wBits.clr(currSq)
 	cnt += bitCombs(wBits, fr, currSq, currIx, maxM, mTabEntry, dirs)
 
 	return cnt

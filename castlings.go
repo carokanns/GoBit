@@ -12,12 +12,6 @@ const (
 	longW  = uint(0x2) // white can castle long
 	shortB = uint(0x4) // black can castle short
 	longB  = uint(0x8) // black can castle short
-
-	// squares between rook and king
-	betweenWSh = bitBoard(uint64(1)<<G1) | bitBoard(uint64(1)<<F1)
-	betweenWL  = bitBoard(uint64(1)<<B1) | bitBoard(uint64(1)<<C1) | bitBoard(uint64(1)<<D1)
-	betweenBSh = bitBoard(uint64(1)<<G8) | bitBoard(uint64(1)<<F8)
-	betweenBL  = bitBoard(uint64(1)<<B8) | bitBoard(uint64(1)<<C8) | bitBoard(uint64(1)<<D8)
 )
 
 type castlOptions struct {
@@ -33,18 +27,18 @@ type castlOptions struct {
 }
 
 var castl = [2]castlOptions{
-	{shortW, longW, wR, E1, H1, A1, betweenWSh, betweenWL, 0x0, 0x0, 0x0, 0x0},
-	{shortB, longB, bR, E8, H8, A8, betweenBSh, betweenBL, 0x0, 0x0, 0x0, 0x0},
+	{shortW, longW, wR, E1, H1, A1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
+	{shortB, longB, bR, E8, H8, A8, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0},
 }
 
-// only castling privileges (not if it is legal on board)
-func (c castlings) canCastle(sd color) bool {
-	return c.canCastleShort(sd) || c.canCastleLong(sd)
+// castling privileges
+func (c castlings) flags(sd color) bool {
+	return c.shortFlag(sd) || c.longFlag(sd)
 }
-func (c castlings) canCastleShort(sd color) bool {
+func (c castlings) shortFlag(sd color) bool {
 	return (castl[sd].short & uint(c)) != 0
 }
-func (c castlings) canCastleLong(sd color) bool {
+func (c castlings) longFlag(sd color) bool {
 	return (castl[sd].long & uint(c)) != 0
 }
 
@@ -101,33 +95,47 @@ func parseCastlings(fenCastl string) castlings {
 
 func initCastlings() {
 	fmt.Println("init castlings")
-	// pawns stops short castling W
+	// squares between K and R short castling
+	castl[WHITE].betweenSh.set(F1)
+	castl[WHITE].betweenSh.set(G1)
+	castl[BLACK].betweenSh.set(F8)
+	castl[BLACK].betweenSh.set(G8)
+
+	// squares between K and R long castling
+	castl[WHITE].betweenL.set(B1)
+	castl[WHITE].betweenL.set(C1)
+	castl[WHITE].betweenL.set(D1)
+	castl[BLACK].betweenL.set(B8)
+	castl[BLACK].betweenL.set(C8)
+	castl[BLACK].betweenL.set(D8)
+
+	// pawns stop short castling W
 	castl[WHITE].pawnsSh.set(D2)
 	castl[WHITE].pawnsSh.set(E2)
 	castl[WHITE].pawnsSh.set(F2)
 	castl[WHITE].pawnsSh.set(G2)
 	castl[WHITE].pawnsSh.set(H2)
-	// pawns stops long castling W
+	// pawns stop long castling W
 	castl[WHITE].pawnsL.set(B2)
 	castl[WHITE].pawnsL.set(C2)
 	castl[WHITE].pawnsL.set(D2)
 	castl[WHITE].pawnsL.set(E2)
 	castl[WHITE].pawnsL.set(F2)
 
-	// pawns stops short castling B
+	// pawns stop short castling B
 	castl[BLACK].pawnsSh.set(D7)
 	castl[BLACK].pawnsSh.set(E7)
 	castl[BLACK].pawnsSh.set(F7)
 	castl[BLACK].pawnsSh.set(G7)
 	castl[BLACK].pawnsSh.set(H7)
-	// pawns stops long castling B
+	// pawns stop long castling B
 	castl[BLACK].pawnsL.set(B7)
 	castl[BLACK].pawnsL.set(C7)
 	castl[BLACK].pawnsL.set(D7)
 	castl[BLACK].pawnsL.set(E7)
 	castl[BLACK].pawnsL.set(F7)
 
-	// knights stops short castling W
+	// knights stop short castling W
 	castl[WHITE].knightsSh.set(C2)
 	castl[WHITE].knightsSh.set(D2)
 	castl[WHITE].knightsSh.set(E2)
@@ -138,7 +146,7 @@ func initCastlings() {
 	castl[WHITE].knightsSh.set(F3)
 	castl[WHITE].knightsSh.set(G3)
 	castl[WHITE].knightsSh.set(H3)
-	// knights stops long castling W
+	// knights stop long castling W
 	castl[WHITE].knightsL.set(A2)
 	castl[WHITE].knightsL.set(B2)
 	castl[WHITE].knightsL.set(C2)
@@ -151,7 +159,7 @@ func initCastlings() {
 	castl[WHITE].knightsL.set(E3)
 	castl[WHITE].knightsL.set(F3)
 
-	// knights stops short castling B
+	// knights stop short castling B
 	castl[BLACK].knightsSh.set(C7)
 	castl[BLACK].knightsSh.set(D7)
 	castl[BLACK].knightsSh.set(E7)
@@ -162,7 +170,7 @@ func initCastlings() {
 	castl[BLACK].knightsSh.set(F6)
 	castl[BLACK].knightsSh.set(G6)
 	castl[BLACK].knightsSh.set(H6)
-	// knights stops long castling B
+	// knights stop long castling B
 	castl[BLACK].knightsL.set(A7)
 	castl[BLACK].knightsL.set(B7)
 	castl[BLACK].knightsL.set(C7)

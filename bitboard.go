@@ -12,16 +12,16 @@ func (b bitBoard) count() int {
 	return bits.OnesCount64(uint64(b))
 }
 
-func (b *bitBoard) set(pos uint) {
-	*b |= bitBoard(uint64(1) << pos)
+func (b *bitBoard) set(pos int) {
+	*b |= bitBoard(uint64(1) << uint(pos))
 }
 
-func (b bitBoard) test(pos uint) bool {
-	return (b & bitBoard(uint64(1)<<pos)) != 0
+func (b bitBoard) test(pos int) bool {
+	return (b & bitBoard(uint64(1)<<uint(pos))) != 0
 }
 
-func (b *bitBoard) clr(pos uint) {
-	*b &= bitBoard(^(uint64(1) << pos))
+func (b *bitBoard) clr(pos int) {
+	*b &= bitBoard(^(uint64(1) << uint(pos)))
 }
 
 func (b *bitBoard) firstOne() int {

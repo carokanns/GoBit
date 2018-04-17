@@ -29,7 +29,7 @@ func Test_sMagic_atks(t *testing.T) {
 	}
 }
 
-func createBitBoard(bits ...uint) bitBoard {
+func createBitBoard(bits ...int) bitBoard {
 	BB := bitBoard(0)
 	for _, b := range bits {
 		BB.set(b)

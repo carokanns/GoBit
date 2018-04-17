@@ -34,20 +34,20 @@ func Test_moveList_add(t *testing.T) {
 
 func Test_move_packMove(t *testing.T) {
 	type args struct {
-		fr    uint
-		to    uint
-		p12   uint
-		cp    uint
-		pr    uint
-		epSq  uint
-		castl uint
+		fr    int
+		to    int
+		p12   int
+		cp    int
+		pr    int
+		epSq  int
+		castl castlings
 	}
 	tests := []struct {
 		name string
 		args args
 	}{
-		{"", args{A1, A2, wR, empty, empty, 0, (shortW | shortB)}},
-		{"", args{D4, D5, bR, wQ, empty, E3, (shortW | longB)}},
+		{"", args{A1, A2, wR, empty, empty, 0, castlings(shortW | shortB)}},
+		{"", args{D4, D5, bR, wQ, empty, E3, castlings(shortW | longB)}},
 	}
 	var m move
 	for _, tt := range tests {
