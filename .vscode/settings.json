@@ -13,9 +13,7 @@
     "diverese": true,
     "pm.txt": true,
     "GoBit.exe~": true,
-    ".gitignore": true,
-    "engine-interface.txt": true,
-    "temp.go": true
+    ".gitignore": true
   },
   "cSpell.words": [
     "Pval",

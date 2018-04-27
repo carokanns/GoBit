@@ -22,7 +22,7 @@ func Test_sMagic_atks(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			handlePosition("position " + tt.position)
-			if got := tt.m.atks(&board); got != tt.want {
+			if got := tt.m.atks(board.allBB()); got != tt.want {
 				t.Errorf("sMagic.atks() = \n%v\nwant \n%v", got.Stringln(), tt.want.Stringln())
 			}
 		})

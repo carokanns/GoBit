@@ -28,6 +28,7 @@ const (
 	epShift    = 24 //6+6+4+4+4
 	castlShift = 30 //6+6+4+4+4+6
 	evalShift  = 64 - 16
+	noMove = move(0)
 )
 
 var pieceRules [nP][]int // not pawns
@@ -45,7 +46,7 @@ func (m move) StringFull() string {
 	p := int2Fen(int(m.p12()))
 	cp := int2Fen(int(m.cp())) + " "
 	pr := int2Fen(int(m.pr()))
-	return fmt.Sprintf("%v%v-%v%v%v", p, fr, cp[:1], to, pr)
+	return trim(fmt.Sprintf("%v%v-%v%v%v", p, fr, cp[:1], to, pr))
 }
 
 func (m *move) packMove(fr, to, p12, cp, pr, epSq int, castl castlings) {
@@ -54,6 +55,7 @@ func (m *move) packMove(fr, to, p12, cp, pr, epSq int, castl castlings) {
 		(cp << cpShift) | (pr << prShift) | (epSq << epShift) | int(castl << castlShift) )
 }
 func (m *move) packEval(score int) {
+	(*m) &= move(^evalMask)   //clear eval
 	(*m) |= move(score + 30000) << evalShift
 }
 
@@ -84,6 +86,10 @@ func (m move) castl() castlings {
 }
 
 type moveList []move
+
+func (ml *moveList) clear() {
+	*ml = (*ml)[:0]
+}
 
 func (ml *moveList) add(mv move) {
 	*ml = append(*ml, mv)

@@ -81,22 +81,82 @@ func Test_move_packMove(t *testing.T) {
 func Test_moveList_remove(t *testing.T) {
 	tests := []struct {
 		name string
-		cnt int
-		ix int
+		cnt  int
+		ix   int
 	}{
-		{"5 3",5,3},
-		{"5 0",5,0},
-		{"5 4",5,4},
-		{"1 0",1,0},
+		{"5 3", 5, 3},
+		{"5 0", 5, 0},
+		{"5 4", 5, 4},
+		{"1 0", 1, 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var ml   moveList
-			for i :=0;i<tt.cnt;i++{ml.add(move(i))}
-			ml.remove(tt.ix)
-			if len(ml) != tt.cnt-1{
-				t.Errorf("%v: we should have %v moves but have %v",tt.name,tt.cnt-1,len(ml))
+			var ml moveList
+			for i := 0; i < tt.cnt; i++ {
+				ml.add(move(i))
 			}
+			ml.remove(tt.ix)
+			if len(ml) != tt.cnt-1 {
+				t.Errorf("%v: we should have %v moves but have %v", tt.name, tt.cnt-1, len(ml))
+			}
+		})
+	}
+}
+
+func Test_move_packEval(t *testing.T) {
+	type args struct {
+		fr    int
+		to    int
+		p12   int
+		cp    int
+		pr    int
+		epSq  int
+		castl castlings
+
+		score int
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{"", args{A1, A2, wR, empty, empty, 0, castlings(shortW | shortB),-1111}},
+		{"", args{D4, D5, bR, wQ, empty, E3, castlings(shortW | longB),222}},
+		{"", args{E2, E4, wP, empty, empty, 0, castlings(shortW | shortB),-129}},
+		{"", args{G1, F3, wN, empty, empty, E6, castlings(shortW | longB),169}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mv := noMove
+			mv.packMove(tt.args.fr, tt.args.to, tt.args.p12, tt.args.cp, tt.args.pr, tt.args.epSq, tt.args.castl)
+			mv.packEval(-2999)    // set garbage in eval
+			mv.packEval(tt.args.score)
+			if mv.fr() != tt.args.fr {
+				t.Errorf("%v: want fr=%v. Got %v ", tt.name, tt.args.fr, mv.fr())
+			}
+			if mv.to() != tt.args.to {
+				t.Errorf("%v: want to=%v. Got %v ", tt.name, tt.args.to, mv.to())
+			}
+			if mv.p12() != tt.args.p12 {
+				t.Errorf("%v: want p12=%v. Got %v ", tt.name, tt.args.p12, mv.p12())
+			}
+			if mv.cp() != tt.args.cp {
+				t.Errorf("%v: want cp=%v. Got %v ", tt.name, tt.args.cp, mv.cp())
+			}
+			if mv.pr() != tt.args.pr {
+				t.Errorf("%v: want r=%v. Got %v ", tt.name, tt.args.pr, mv.pr())
+			}
+			if mv.ep() != tt.args.epSq {
+				t.Errorf("%v: want epr=%v. Got %v ", tt.name, tt.args.epSq, mv.ep())
+			}
+			if mv.castl() != castlings(tt.args.castl) {
+				t.Errorf("%v: want castl=%v. Got %v ", tt.name, tt.args.castl, mv.castl())
+			}
+
+			if mv.eval() != tt.args.score {
+				t.Errorf("%v: want score=%v. Got %v ", tt.name, tt.args.score, mv.eval())
+			}
+
+
 		})
 	}
 }

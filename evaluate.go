@@ -1,6 +1,12 @@
 package main
+const (
+	maxEval = +10000
+	minEval = -maxEval
+	mateEval= maxEval+1
+	noScore = minEval-1
+)
 
-var pieceVal = [12]int{100, -100, 325, -325, 350, -350, 500, -500, 950, -950, 10000, -10000}
+var pieceVal = [16]int{100, -100, 325, -325, 350, -350, 500, -500, 950, -950, 10000, -10000,0,0,0,0}
 
 var knightFile = [8]int{-4, -3, -2, +2, +2, 0, -2, -4}
 var knightRank = [8]int{-15, 0, +5, +6, +7, +8, +2, -4}

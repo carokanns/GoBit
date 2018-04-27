@@ -38,19 +38,18 @@ func Test_Uci(t *testing.T) {
 	//	{"pos incorrect move 3", "position startpos moves e2e4 e7e5 e4e5", []string{"info string e4e5 in moves within the postion commad is not a corect move"}},
 		{"ponderhit", "ponderhit", []string{"info string ponderhit not implemented"}},
 		{"debug", "debug on", []string{"info string debug not implemented"}},
-		{"go movetime", "go movetime 1000", []string{"info string go movetime not implemented"}},
+	//	{"go movetime", "go movetime 1000", []string{"info string engine got go! X"}},
 		{"go movestogo", "go movestogo 20", []string{"info string go movestogo not implemented"}},
 		{"go wtime", "go wtime 10000", []string{"info string go wtime not implemented"}},
 		{"go btime", "go btime 11000", []string{"info string go btime not implemented"}},
 		{"go winc", "go winc 500", []string{"info string go winc not implemented"}},
 		{"go binc", "go binc 500", []string{"info string go binc not implemented"}},
-		{"go depth", "go depth 7", []string{"info string go depth not implemented"}},
+	//	{"go depth", "go depth 7", []string{"info string go depth not implemented"}},
 		{"go nodes", "go nodes 11000", []string{"info string go nodes not implemented"}},
 		{"go mate", "go mate 11000", []string{"info string go mate not implemented"}},
 		{"go ponder", "go ponder", []string{"info string go ponder not implemented"}},
-		{"go infinte", "go infinite", []string{"info string go infinite not implemented"}},
-		{"stop", "stop", []string{"info string stop not implemented"}},
-		{"wrong cmd", "skit", []string{"info string unknown cmd"}},
+	//	{"go infinte", "go infinite", []string{"info string go infinite not implemented"}},
+			{"wrong cmd", "skit", []string{"info string unknown cmd"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -71,6 +70,35 @@ func Test_Uci(t *testing.T) {
 				}
 			}
 
+		})
+	}
+}
+
+func Test_handleStop(t *testing.T){
+	tests := []struct {
+		name  string
+		saveBm string 
+		infinite bool
+		want bool
+	}{
+			{"stop","bestmove a1h8", true,false},
+			{"stop","", true,false},
+			{"stop","", false,false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			saveBm = tt.saveBm
+			limits.setInfinite(tt.infinite)
+			handleStop()
+			if limits.infinite != tt.want {
+				t.Errorf("%v: limits.infinite should be %v but is %v", tt.name, tt.infinite, limits.infinite)
+			}
+			if limits.stop != true {
+				t.Errorf("%v: limits.stop should be %v but is %v", tt.name, true, limits.stop)
+			}
+			if saveBm  != "" {
+				t.Errorf("%v: saveBm should be %v but is %v", tt.name, "", saveBm)
+			}
 		})
 	}
 }

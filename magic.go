@@ -13,8 +13,8 @@ var mBishopTab [64]sMagic
 var mRookTab [64]sMagic
 
 // all attacks from current square
-func (m *sMagic) atks(b *boardStruct) bitBoard {
-	return m.toSqBB[int(((b.allBB()&m.innerBB)*bitBoard(m.magic))>>m.shift)]
+func (m *sMagic) atks(allBB bitBoard) bitBoard {
+	return m.toSqBB[int(((allBB&m.innerBB)*bitBoard(m.magic))>>m.shift)]
 }
 
 func initMagic() {

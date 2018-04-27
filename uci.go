@@ -53,7 +53,7 @@ func uci(input chan string) {
 		case "ponderhit":
 			handlePonderhit()
 		case "stop":
-			handleStop(toEng)
+			handleStop()
 		case "quit", "q":
 			handleQuit()
 			quit = true
@@ -63,7 +63,26 @@ func uci(input chan string) {
 		case "pbb":
 			board.printAllBB()
 		case "pm":
-			board.printAllLegals()
+			board.printAllLegals()	
+		case "pe":
+			fmt.Println("eval =",evaluate(&board))	
+		case "psee":
+			fr,to:=empty,empty
+			if len(words[1]) == 2 && len(words[2]) == 2{ 
+			fr = fenSq2Int[words[1]]
+			to = fenSq2Int[words[2]]
+			}else if len(words[1]) == 4{
+				fr = fenSq2Int[words[1][0:2]]
+				to = fenSq2Int[words[2][2:]]	
+			}else{
+				fmt.Println("error in fr/to")
+				continue
+			}
+
+			fmt.Println("see = ", see(fr,to,&board))
+		case "pqs":
+			fmt.Println("qs =",qs(maxEval,&board))	
+
 		default:
 			tell("info string unknown cmd ", cmd)
 		}
@@ -124,7 +143,7 @@ func handlePosition(cmd string) {
 	}
 }
 
-func handleStop(toEng chan bool) {
+func handleStop() {
 	if limits.infinite {
 		if saveBm != "" {
 			tell(saveBm)
@@ -158,7 +177,7 @@ func handleSetOption(words []string) {
 // go  searchmoves <move1-moveii>/ponder/wtime <ms>/ btime <ms>/winc <ms>/binc <ms>/movestogo <x>/
 //     depth <x>/nodes <x>/movetime <ms>/mate <x>/infinite
 func handleGo(toEng chan bool, words []string) {
-	// TODO: Start with moveTime and infinite
+	// TODO: Right ne can only handle one of them at a time. We need to be able to mix them
 	limits.init()
 	if len(words) > 1 {
 		words[1] = trim(low(words[1]))
@@ -178,7 +197,13 @@ func handleGo(toEng chan bool, words []string) {
 		case "movestogo":
 			tell("info string go movestogo not implemented")
 		case "depth":
-			tell("info string go depth not implemented")
+				d,err := strconv.Atoi(words[2])
+			if err!=nil{
+				tell("info string ",words[2]," not numeric")
+				return
+			}
+			limits.setDepth(d)
+			toEng<-true
 		case "nodes":
 			tell("info string go nodes not implemented")
 		case "movetime":
