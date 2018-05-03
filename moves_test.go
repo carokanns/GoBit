@@ -1,3 +1,4 @@
+
 package main
 
 import (
@@ -16,7 +17,7 @@ func Test_moveList_add(t *testing.T) {
 		{"", moveList{}, 3},
 	}
 
-	ml = moveList{}
+	//ml := moveList{}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.ml.add(tt.mv)
@@ -27,6 +28,46 @@ func Test_moveList_add(t *testing.T) {
 			testMv := tt.ml[ix]
 			if testMv != tt.mv {
 				t.Errorf("tt.ml.add() = %v. want %v", testMv, tt.mv)
+			}
+		})
+	}
+}
+
+func Test_move_cmp(t *testing.T) {
+	type args struct {
+		fr    int
+		to    int
+		p12   int
+		cp    int
+		pr    int
+		epSq  int
+		castl castlings
+		eval1 int
+		eval2 int 
+		want bool
+	}
+	tests := []struct {
+		name string
+		args args
+	}{
+		{"", args{A1, A2, wR, empty, empty, 0, castlings(shortW | shortB), 123, 3333,true}},
+		{"", args{D4, D5, bR, wQ, empty, E3, castlings(shortW | longB),0,2,true}},
+	}
+	var m1,m2,m3 move
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m1.packMove(tt.args.fr, tt.args.to, tt.args.p12, tt.args.cp, tt.args.pr, tt.args.epSq, tt.args.castl)
+			m1.packEval(tt.args.eval1)
+			m2.packMove(tt.args.fr, tt.args.to, tt.args.p12, tt.args.cp, tt.args.pr, tt.args.epSq, tt.args.castl)
+			m2.packEval(tt.args.eval2)
+			m3.packMove(tt.args.fr+1, tt.args.to+1, tt.args.p12, tt.args.cp, tt.args.pr, tt.args.epSq, tt.args.castl)
+			m3.packEval(tt.args.eval2)
+
+			if got := m1.cmpFrTo(m2); got != tt.args.want {
+				t.Errorf("move.cmp() = %v, want %v", got, tt.args.want)
+			}
+			if got := m1.cmpFrTo(m3); got == tt.args.want {
+				t.Errorf("move.cmp() = %v, want %v", got, !tt.args.want)
 			}
 		})
 	}
@@ -119,16 +160,16 @@ func Test_move_packEval(t *testing.T) {
 		name string
 		args args
 	}{
-		{"", args{A1, A2, wR, empty, empty, 0, castlings(shortW | shortB),-1111}},
-		{"", args{D4, D5, bR, wQ, empty, E3, castlings(shortW | longB),222}},
-		{"", args{E2, E4, wP, empty, empty, 0, castlings(shortW | shortB),-129}},
-		{"", args{G1, F3, wN, empty, empty, E6, castlings(shortW | longB),169}},
+		{"", args{A1, A2, wR, empty, empty, 0, castlings(shortW | shortB), -1111}},
+		{"", args{D4, D5, bR, wQ, empty, E3, castlings(shortW | longB), 222}},
+		{"", args{E2, E4, wP, empty, empty, 0, castlings(shortW | shortB), -129}},
+		{"", args{G1, F3, wN, empty, empty, E6, castlings(shortW | longB), 169}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mv := noMove
 			mv.packMove(tt.args.fr, tt.args.to, tt.args.p12, tt.args.cp, tt.args.pr, tt.args.epSq, tt.args.castl)
-			mv.packEval(-2999)    // set garbage in eval
+			mv.packEval(-2999) // set garbage in eval
 			mv.packEval(tt.args.score)
 			if mv.fr() != tt.args.fr {
 				t.Errorf("%v: want fr=%v. Got %v ", tt.name, tt.args.fr, mv.fr())
@@ -155,7 +196,6 @@ func Test_move_packEval(t *testing.T) {
 			if mv.eval() != tt.args.score {
 				t.Errorf("%v: want score=%v. Got %v ", tt.name, tt.args.score, mv.eval())
 			}
-
 
 		})
 	}

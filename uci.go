@@ -1,11 +1,11 @@
 package main
 
 import (
-	"strconv"
 	"bufio"
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -16,8 +16,6 @@ var low = strings.ToLower
 var saveBm = ""
 
 func uci(input chan string) {
-	fmt.Println("info string Hello from uci")
-
 	toEng, frEng := engine()
 	var cmd string
 	var bm string
@@ -49,7 +47,7 @@ func uci(input chan string) {
 		case "register":
 			handleRegister(words)
 		case "go":
-			handleGo(toEng,words)
+			handleGo(toEng, words)
 		case "ponderhit":
 			handlePonderhit()
 		case "stop":
@@ -63,25 +61,25 @@ func uci(input chan string) {
 		case "pbb":
 			board.printAllBB()
 		case "pm":
-			board.printAllLegals()	
-		case "pe":
-			fmt.Println("eval =",evaluate(&board))	
-		case "psee":
-			fr,to:=empty,empty
-			if len(words[1]) == 2 && len(words[2]) == 2{ 
-			fr = fenSq2Int[words[1]]
-			to = fenSq2Int[words[2]]
-			}else if len(words[1]) == 4{
+			board.printAllLegals()
+		case "eval":
+			fmt.Println("eval =", evaluate(&board))
+		case "see":
+			fr, to := empty, empty
+			if len(words[1]) == 2 && len(words[2]) == 2 {
+				fr = fenSq2Int[words[1]]
+				to = fenSq2Int[words[2]]
+			} else if len(words[1]) == 4 {
 				fr = fenSq2Int[words[1][0:2]]
-				to = fenSq2Int[words[2][2:]]	
-			}else{
+				to = fenSq2Int[words[1][2:]]
+			} else {
 				fmt.Println("error in fr/to")
 				continue
 			}
 
-			fmt.Println("see = ", see(fr,to,&board))
-		case "pqs":
-			fmt.Println("qs =",qs(maxEval,&board))	
+			fmt.Println("see = ", seex(fr, to, &board))
+		case "qs":
+			fmt.Println("qs =", qsx(maxEval, &board))
 
 		default:
 			tell("info string unknown cmd ", cmd)
@@ -150,14 +148,14 @@ func handleStop() {
 			saveBm = ""
 		}
 
-		limits.setStop(true)
 		limits.setInfinite(false)
 	}
+	limits.setStop(true)
 }
 
 // handleQuit not really necessary
 func handleQuit() {
-	
+
 }
 
 func handleBm(bm string) {
@@ -177,7 +175,7 @@ func handleSetOption(words []string) {
 // go  searchmoves <move1-moveii>/ponder/wtime <ms>/ btime <ms>/winc <ms>/binc <ms>/movestogo <x>/
 //     depth <x>/nodes <x>/movetime <ms>/mate <x>/infinite
 func handleGo(toEng chan bool, words []string) {
-	// TODO: Right ne can only handle one of them at a time. We need to be able to mix them
+	// TODO: Right now can only handle one of them at a time. We need to be able to mix them
 	limits.init()
 	if len(words) > 1 {
 		words[1] = trim(low(words[1]))
@@ -197,35 +195,37 @@ func handleGo(toEng chan bool, words []string) {
 		case "movestogo":
 			tell("info string go movestogo not implemented")
 		case "depth":
-				d,err := strconv.Atoi(words[2])
-			if err!=nil{
-				tell("info string ",words[2]," not numeric")
+			d, err := strconv.Atoi(words[2])
+			if err != nil {
+				tell("info string ", words[2], " not numeric")
 				return
 			}
 			limits.setDepth(d)
-			toEng<-true
+			toEng <- true
 		case "nodes":
 			tell("info string go nodes not implemented")
 		case "movetime":
-			mt,err := strconv.Atoi(words[2])
-			if err!=nil{
-				tell("info string ",words[2]," not numeric")
+			mt, err := strconv.Atoi(words[2])
+			if err != nil {
+				tell("info string ", words[2], " not numeric")
 				return
 			}
 			limits.setMoveTime(mt)
-			toEng<-true
+			toEng <- true
 		case "mate": // mate <x>  mate in x moves
 			tell("info string go mate not implemented")
 		case "infinite":
 			limits.setInfinite(true)
-			toEng<-true
+			toEng <- true
 		case "register":
 			tell("info string go register not implemented")
 		default:
 			tell("info string go ", words[1], " not implemented")
 		}
 	} else {
-		tell("info string go not implemented")
+		tell("info string suppose go infinite")
+		limits.setInfinite(true)
+		toEng <- true
 	}
 }
 

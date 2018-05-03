@@ -28,7 +28,7 @@ const (
 	epShift    = 24 //6+6+4+4+4
 	castlShift = 30 //6+6+4+4+4+6
 	evalShift  = 64 - 16
-	noMove = move(0)
+	noMove     = move(0)
 )
 
 var pieceRules [nP][]int // not pawns
@@ -52,15 +52,21 @@ func (m move) StringFull() string {
 func (m *move) packMove(fr, to, p12, cp, pr, epSq int, castl castlings) {
 	// 6 bits fr, 6 bits to, 4 bits p12, 4 bits cp, 4 bits prom, 4 bits ep, 4 bits castl = 32 bits
 	*m = move(fr | (to << toShift) | (p12 << p12Shift) |
-		(cp << cpShift) | (pr << prShift) | (epSq << epShift) | int(castl << castlShift) )
+		(cp << cpShift) | (pr << prShift) | (epSq << epShift) | int(castl<<castlShift))
 }
 func (m *move) packEval(score int) {
-	(*m) &= move(^evalMask)   //clear eval
-	(*m) |= move(score + 30000) << evalShift
+	(*m) &= move(^evalMask) //clear eval
+	(*m) |= move(score+30000) << evalShift
+}
+
+// compare two moves - only frSq and toSq
+func (m move) cmpFrTo(m2 move) bool {
+	// return (m & move(^evalMask)) == (m2 & move(^evalMask))
+	 return m.fr() == m2.fr() && m.to() == m2.to()
 }
 
 func (m move) eval() int {
-	return int((uint(m) & uint(evalMask)) >>evalShift) -30000
+	return int((uint(m)&uint(evalMask))>>evalShift) - 30000
 }
 func (m move) fr() int {
 	return int(m & frMask)
@@ -95,20 +101,20 @@ func (ml *moveList) add(mv move) {
 	*ml = append(*ml, mv)
 }
 
-func (ml *moveList) remove(ix int){
-	if len(*ml) > ix && ix >=0{
-		*ml = append((*ml)[:ix],(*ml)[ix+1:]...)
+func (ml *moveList) remove(ix int) {
+	if len(*ml) > ix && ix >= 0 {
+		*ml = append((*ml)[:ix], (*ml)[ix+1:]...)
 	}
 }
 
 // Sort is sorting the moves in the Score/Move list according to the score per move
-func (ml *moveList) sort(){
+func (ml *moveList) sort() {
 	bSwap := true
 	for bSwap {
 		bSwap = false
 		for i := 0; i < len(*ml)-1; i++ {
 			if (*ml)[i+1].eval() > (*ml)[i].eval() {
-				(*ml)[i],(*ml)[i+1] = (*ml)[i+1], (*ml)[i]
+				(*ml)[i], (*ml)[i+1] = (*ml)[i+1], (*ml)[i]
 				bSwap = true
 			}
 		}
@@ -122,5 +128,3 @@ func (ml moveList) String() string {
 	}
 	return theString
 }
-
-var ml = moveList{}

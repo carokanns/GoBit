@@ -51,7 +51,6 @@ func pSqScore(p12, sq int) int {
 
 // PstInit intits the pieces-square-tables when the program starts
 func pSqInit() {
-	tell("info string pStInit startar")
 	for p12 := 0; p12 < 12; p12++ {
 		for sq := 0; sq < 64; sq++ {
 			pSqTab[p12][sq] = 0

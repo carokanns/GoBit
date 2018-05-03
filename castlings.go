@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fmt"
+	
 	"strings"
 )
 
@@ -94,7 +94,6 @@ func parseCastlings(fenCastl string) castlings {
 }
 
 func initCastlings() {
-	fmt.Println("init castlings")
 	// squares between K and R short castling
 	castl[WHITE].betweenSh.set(F1)
 	castl[WHITE].betweenSh.set(G1)

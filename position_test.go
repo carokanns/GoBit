@@ -54,43 +54,41 @@ func Test_boardStruct_allBB(t *testing.T) {
 	}
 }
 
-
 func Test_move(t *testing.T) {
 	tests := []struct {
-		name   string
-		pos    string
-		want []int    // pairs of sq + content
-		wantEp int
+		name      string
+		pos       string
+		want      []int // pairs of sq + content
+		wantEp    int
 		wantCastl uint
 	}{
-		{"","position startpos moves a2a4",[]int{A2,empty,A4,wP},A3, shortW|longW|shortB|longB},
-		{"","position startpos moves b1c3 g8f6 a1b1",[]int{A1,empty,B1,wR},0, shortW|shortB|longB},
-		{"","position startpos moves b1c3 g8f6 a1b1 h8g8",[]int{A1,empty,B1,wR},0, shortW|longB},
-		{"","position startpos moves b1c3 g8f6 g1f3 b8c6 a1b1 a8b8 h1g1 h8g8",[]int{A1,empty,B1,wR},0, 0},
-		{"","position startpos moves e2e4 e7e5 e1e2 e8e7",[]int{},0, 0},
-		{"","position startpos moves d2d4 d7d5 b1c3 b8c6 c1f4 c8f5 e1c1 e8c8",[]int{A1,empty, B1,empty,C1,wK,D1,wR,E1,empty, A8,empty, B8,empty,C8,bK,D8,bR,E8,empty},
-		0, 0},
+		{"", "position startpos moves a2a4", []int{A2, empty, A4, wP}, A3, shortW | longW | shortB | longB},
+		{"", "position startpos moves b1c3 g8f6 a1b1", []int{A1, empty, B1, wR}, 0, shortW | shortB | longB},
+		{"", "position startpos moves b1c3 g8f6 a1b1 h8g8", []int{A1, empty, B1, wR}, 0, shortW | longB},
+		{"", "position startpos moves b1c3 g8f6 g1f3 b8c6 a1b1 a8b8 h1g1 h8g8", []int{A1, empty, B1, wR}, 0, 0},
+		{"", "position startpos moves e2e4 e7e5 e1e2 e8e7", []int{}, 0, 0},
+		{"", "position startpos moves d2d4 d7d5 b1c3 b8c6 c1f4 c8f5 e1c1 e8c8", []int{A1, empty, B1, empty, C1, wK, D1, wR, E1, empty, A8, empty, B8, empty, C8, bK, D8, bR, E8, empty},
+			0, 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			handlePosition(tt.pos)
-			for ix:=0; ix<len(tt.want);ix+=2{
-				sq:=tt.want[ix]
-				p12:=tt.want[ix+1]
+			for ix := 0; ix < len(tt.want); ix += 2 {
+				sq := tt.want[ix]
+				p12 := tt.want[ix+1]
 				if board.sq[sq] != p12 {
-					t.Errorf("%v:  want %v on sq=%v got %v",tt.name, p12, sq, board.sq[sq] )
+					t.Errorf("%v:  want %v on sq=%v got %v", tt.name, p12, sq, board.sq[sq])
 				}
 			}
-			if board.ep != tt.wantEp{
-					t.Errorf("%v:  want ep=%v got %v",tt.name, tt.wantEp, board.ep )
+			if board.ep != tt.wantEp {
+				t.Errorf("%v:  want ep=%v got %v", tt.name, tt.wantEp, board.ep)
 			}
-			if board.castlings != castlings(tt.wantCastl){
-					t.Errorf("%v:  want castl=%v got %v",tt.name, tt.wantCastl, board.castlings )
+			if board.castlings != castlings(tt.wantCastl) {
+				t.Errorf("%v:  want castl=%v got %v", tt.name, tt.wantCastl, board.castlings)
 			}
 		})
 	}
 }
-
 
 func Test_unmove(t *testing.T) {
 	type movStr struct{ fr, to, p12, cp, pr int }
@@ -183,7 +181,7 @@ func Test_setSq(t *testing.T) {
 }
 
 func Test_genQueenMoves(t *testing.T) {
-	ml = moveList{}
+	//ml := moveList{}
 
 	tests := []struct {
 		name string
@@ -196,7 +194,7 @@ func Test_genQueenMoves(t *testing.T) {
 	for _, tt := range tests {
 		var mlq moveList
 		handlePosition(tt.pos)
-		board.genQueenMoves(&mlq)
+		board.genQueenMoves(&mlq, ^board.wbBB[board.stm])
 		if f, mv := findMoves(&mlq, tt.mv); f == false {
 			t.Errorf("%v: %v wasn't generated", tt.name, mv.String())
 		}
@@ -209,7 +207,7 @@ func Test_genQueenMoves(t *testing.T) {
 }
 
 func Test_genKnightMoves(t *testing.T) {
-	ml = moveList{}
+	//ml := moveList{}
 	tests := []struct {
 		name string
 		pos  string
@@ -230,7 +228,7 @@ func Test_genKnightMoves(t *testing.T) {
 		var ml moveList
 		t.Run(tt.name, func(t *testing.T) {
 			handlePosition(tt.pos)
-			board.genKnightMoves(&ml)
+			board.genKnightMoves(&ml, ^board.wbBB[board.stm])
 			if f, mv := findMoves(&ml, tt.mv); f == false {
 				t.Errorf("%v: %v wasn't generated", tt.name, mv.String())
 			}
@@ -243,7 +241,7 @@ func Test_genKnightMoves(t *testing.T) {
 	}
 }
 func Test_genBishopMoves(t *testing.T) {
-	ml = moveList{}
+	//ml := moveList{}
 
 	tests := []struct {
 		name string
@@ -264,7 +262,7 @@ func Test_genBishopMoves(t *testing.T) {
 		var ml moveList
 		t.Run(tt.name, func(t *testing.T) {
 			handlePosition(tt.pos)
-			board.genBishopMoves(&ml)
+			board.genBishopMoves(&ml, ^board.wbBB[board.stm])
 			board.filterLegals(&ml)
 
 			if f, mv := findMoves(&ml, tt.mv); f == false {
@@ -280,7 +278,7 @@ func Test_genBishopMoves(t *testing.T) {
 }
 
 func Test_genKingMoves(t *testing.T) {
-	ml = moveList{}
+	//ml := moveList{}
 
 	tests := []struct {
 		name string
@@ -291,9 +289,9 @@ func Test_genKingMoves(t *testing.T) {
 		{"startpos", "position startpos", []string{}, 0},
 		{"e1d1", "position startpos moves d2d3 d7d6 d1d2 d8d7", []string{"e1d1"}, 1},
 		{"short W k moved", "position startpos moves e2e4 e7e5 g1f3 g8f6 f1c4 f8c5 e1f1 c5f8 f1e1 f8c5",
-			[]string{ "e1e2", "e1f1"}, 2},
+			[]string{"e1e2", "e1f1"}, 2},
 		{"short W", "position startpos moves e2e4 e7e5 g1f3 g8f6 f1c4 f8c5 ",
-			[]string{ "e1g1 e1e2", "e1f1"}, 3},
+			[]string{"e1g1", "e1e2", "e1f1"}, 3},
 		{"short B", "position startpos moves e2e4 e7e5 g1f3 g8f6 f1c4 f8c5 b1c3",
 			[]string{"e8g8", "e8e7", "e8f8"}, 3},
 		{"Short check W", "position startpos moves e2e4 e7e5 g1f3 d8g5 f1c4 g5g2",
@@ -313,7 +311,7 @@ func Test_genKingMoves(t *testing.T) {
 		var ml moveList
 		t.Run(tt.name, func(t *testing.T) {
 			handlePosition(tt.pos)
-			board.genKingMoves(&ml)
+			board.genKingMoves(&ml, ^board.wbBB[board.stm])
 			board.filterLegals(&ml)
 			if f, mv := findMoves(&ml, tt.mv); f == false {
 				board.Print()
@@ -347,7 +345,7 @@ func Test_genRookMoves(t *testing.T) {
 		var ml moveList
 		t.Run(tt.name, func(t *testing.T) {
 			handlePosition(tt.pos)
-			board.genRookMoves(&ml)
+			board.genRookMoves(&ml, ^board.wbBB[board.stm])
 			if f, mv := findMoves(&ml, tt.mv); f == false {
 				t.Errorf("%v: %v wasn't generated", tt.name, mv.String())
 			}
@@ -382,7 +380,7 @@ func Test_genPawnMoves(t *testing.T) {
 			[]string{"b2b4", "e2e3", "e2e4", "f2f3", "f2f4", "h2h3", "h2h4", "g5h6"}, 14},
 
 		{"pr W", "position fen r1n5/1PPP2P1/8/8/7p/4k2P/1p2p1P1/1N2K3 w - - 0 47",
-			[]string{"b7a8Q", "b7a8B", "b7b8R", "b7c8N", "d7c8Q", "d7d8R", "g7g8Q", "g7g8R", "g7g8N", "g7g8B"}, 26},
+			[]string{"b7a8B", "b7a8Q", "b7b8R", "b7c8N", "d7c8Q", "d7d8R", "g7g8Q", "g7g8R", "g7g8N", "g7g8B"}, 26},
 
 		{"startpos B", "position startpos moves a2a3", []string{"a7a6", "e7e5", "h7h6", "h7h5"}, 16},
 
@@ -406,6 +404,64 @@ func Test_genPawnMoves(t *testing.T) {
 			handlePosition(tt.pos)
 			ml = moveList{}
 			board.genPawnMoves(&ml)
+			bError := false
+			if f, mv := findMoves(&ml, tt.mv); f == false {
+				t.Errorf("%v: %v wasn't generated", tt.name, mv.String())
+				bError = true
+			}
+			if tt.cnt >= 0 {
+				if tt.cnt != len(ml) {
+					t.Errorf("%v: number of moves should be %v. Got %v", tt.name, tt.cnt, len(ml))
+					bError = true
+				}
+			}
+			if bError {
+				log.Print(ml.String())
+			}
+		})
+	}
+}
+
+func Test_boardStruct_genPawnNonCapt(t *testing.T) {
+	tests := []struct {
+		name string
+		pos  string
+		mv   []string
+		cnt  int
+	}{
+		{"extra", "position fen 8/8/1k2P3/8/8/6K1/2p5/8 w - - 0 47", []string{}, 1},
+		{"startpos", "position startpos", []string{"a2a3", "a2a4", "e2e3", "e2e4", "g2g3", "g2g4", "h2h3", "h2h4"}, 16},
+		{"startpos B", "position startpos moves a2a3", []string{"e7e5", "h7h6", "h7h5", "a7a6"}, 16},
+
+		{"Dont ep L", "position fen rnbqkbnr/1ppp1p2/4p1pp/pP5P/8/8/P1PPPPP1/RNBQKBNR w KQkq a6 0 5",
+			[]string{"b5b6", "e2e4", "g2g3", "g2g4"}, 13},
+		{"Dont ep R", "position fen rnbqkbnr/1p2ppp1/p1p5/P2p2Pp/8/8/1PPPPP1P/RNBQKBNR w KQkq h6 0 5",
+			[]string{"b2b4", "e2e3", "e2e4", "f2f3", "f2f4", "h2h3", "h2h4"}, 13},
+
+		{"Dont prom", "position fen r1n5/1PPP2P1/8/8/7p/4k2P/1p2p1P1/1N2K3 w - - 0 47",
+			[]string{"g2g3", "g2g4"}, 2},
+
+		{"Dont cap L B", "position fen rnbqkbnr/p1pp1pp1/8/1p2p2p/P2P2P1/8/1PP1PP1P/RNBQKBNR b KQkq - 0 4",
+			[]string{"b5b4", "d7d5", "e5e4", "h5h4"}, 13},
+		{"Dont cap R B", "position fen r1bqkbnr/1ppp1p1p/2n5/p3p1p1/1P1P3P/6P1/P1P1PP2/RNBQKBNR b KQkq - 0 5",
+			[]string{"a5a4", "b7b5", "g5g4", "f7f5", "b7b6"}, 11},
+
+		{"Dont ep L B", "position fen rnbqkbnr/p1ppppp1/8/8/Pp5p/2P1PPP1/1P1P3P/RNBQKBNR b KQkq a3 0 5",
+			[]string{"a7a5", "e7e6", "e7e5", "g7g5", "h4h3"}, 14},
+		{"DOnt ep R B", "position fen rnbqkbnr/1p2pp1p/2p5/3p4/p5pP/P7/1PPPPPP1/RNBQKBNR b KQkq h3 0 5",
+			[]string{"d5d4"}, 11},
+
+		{"Dont pr B", "position fen 8/1PPP1pP1/8/6K1/8/4k3/pppp2p1/BNR5 b - - 0 47",
+			[]string{"f7f6", "f7f5"}, 2},
+	}
+
+	for _, tt := range tests {
+		var ml moveList
+		t.Run(tt.name, func(t *testing.T) {
+			board.newGame()
+			handlePosition(tt.pos)
+			ml = moveList{}
+			board.genPawnNonCapt(&ml)
 			if f, mv := findMoves(&ml, tt.mv); f == false {
 				t.Errorf("%v: %v wasn't generated", tt.name, mv.String())
 				log.Print(ml.String())
@@ -415,6 +471,70 @@ func Test_genPawnMoves(t *testing.T) {
 					t.Errorf("%v: number of moves should be %v. Got %v", tt.name, tt.cnt, len(ml))
 					log.Print(ml.String())
 				}
+			}
+		})
+	}
+}
+
+func Test_boardStruct_genPawnCapt(t *testing.T) {
+
+	tests := []struct {
+		name string
+		pos  string
+		mv   []string
+		cnt  int
+	}{
+		{"extra", "position fen 8/8/1k2P3/8/8/6K1/2p5/8 w - - 0 47", []string{}, 0},
+		{"startpos", "position startpos", []string{}, 0},
+
+		{"cap L W", "position fen r1bqkbnr/1ppp1p1p/2n5/p3p1p1/1P1P3P/6P1/P1P1PP2/RNBQKBNR w KQkq - 0 5",
+			[]string{"b4a5", "d4e5"}, 3},
+		{"cap R W", "position fen rnbqkbnr/p1pp1pp1/8/1p2p2p/P2P2P1/8/1PP1PP1P/RNBQKBNR w KQkq - 0 4",
+			[]string{"a4b5", "d4e5", "g4h5"}, 3},
+
+		{"ep L W", "position fen rnbqkbnr/1ppp1p2/4p1pp/pP5P/8/8/P1PPPPP1/RNBQKBNR w KQkq a6 0 5",
+			[]string{"b5a6", "h5g6"}, 2},
+		{"ep R W", "position fen rnbqkbnr/1p2ppp1/p1p5/P2p2Pp/8/8/1PPPPP1P/RNBQKBNR w KQkq h6 0 5",
+			[]string{"g5h6"}, 1},
+
+		{"pr W", "position fen r1n5/1PPP2P1/8/8/7p/4k2P/1p2p1P1/1N2K3 w - - 0 47",
+			[]string{"b7a8Q", "b7a8B", "b7b8R", "b7c8N", "d7c8Q", "d7d8R", "g7g8Q", "g7g8R", "g7g8N", "g7g8B"}, 24},
+
+		{"startpos B", "position startpos moves a2a3", []string{}, 0},
+
+		{"cap L B", "position fen rnbqkbnr/p1pp1pp1/8/1p2p2p/P2P2P1/8/1PP1PP1P/RNBQKBNR b KQkq - 0 4",
+			[]string{"b5a4", "e5d4", "h5g4"}, 3},
+		{"cap R B", "position fen r1bqkbnr/1ppp1p1p/2n5/p3p1p1/1P1P3P/6P1/P1P1PP2/RNBQKBNR b KQkq - 0 5",
+			[]string{"a5b4", "e5d4", "a5b4", "e5d4", "g5h4"}, 3},
+
+		{"ep L B", "position fen rnbqkbnr/p1ppppp1/8/8/Pp5p/2P1PPP1/1P1P3P/RNBQKBNR b KQkq a3 0 5",
+			[]string{"b4a3", "h4g3"}, 3},
+		{"ep R B", "position fen rnbqkbnr/1p2pp1p/2p5/3p4/p5pP/P7/1PPPPPP1/RNBQKBNR b KQkq h3 0 5",
+			[]string{"g4h3"}, 1},
+
+		{"pr B", "position fen 8/1PPP2P1/8/6K1/8/4k3/pppp2p1/BNR5 b - - 0 47",
+			[]string{"b2a1r", "b2c1n", "c2b1b", "c2b1n", "c2b1q", "d2c1b", "d2c1q", "d2c1r", "d2c1n", "g2g1q", "g2g1r", "g2g1n", "g2g1b", "a2b1q"}, 28},
+	}
+	for _, tt := range tests {
+		var ml moveList
+		t.Run(tt.name, func(t *testing.T) {
+			board.newGame()
+			handlePosition(tt.pos)
+			ml = moveList{}
+			board.genPawnCapt(&ml)
+			bError := false
+			if f, mv := findMoves(&ml, tt.mv); f == false {
+				t.Errorf("%v: %v wasn't generated", tt.name, mv.String())
+				bError = true
+			}
+			if tt.cnt >= 0 {
+				if tt.cnt != len(ml) {
+					bError = true
+					t.Errorf("%v: number of moves should be %v. Got %v", tt.name, tt.cnt, len(ml))
+				}
+			}
+			if bError {
+				log.Print(ml.String())
 			}
 		})
 	}
@@ -432,7 +552,7 @@ func Benchmark_genRookMoves(b *testing.B) {
 	handlePosition("position startpos moves d2d4 d7d5 c1f4 g8f6 e2e3 e7e6 b1d2 c7c5 c2c3 b8c6 g1f3 f8e7 f1d3 c8d7")
 	b.ResetTimer()
 	for n := 0; n < b.N; n++ {
-		board.genRookMoves(&ml)
+		board.genRookMoves(&ml, ^board.wbBB[board.stm])
 	}
 }
 
@@ -466,10 +586,10 @@ func findMoves(mlf *moveList, mvs []string) (bool, move) {
 			}
 		}
 		pr := empty
-		if len(mvStr) == 5 {
+		if len(mvStr) >= 5 {
 			pr = fen2Int(mvStr[4:5])
 		}
-
+		mv1 = noMove
 		mv1.packMove(fr, to, board.sq[fr], cp, pr, board.ep, board.castlings)
 		found = false
 		for _, mv2 := range *mlf {
