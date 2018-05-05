@@ -1,0 +1,13 @@
+features     pos          time     nodes          nps
+___________  ________   ______   _______    _________
+a/b          startpos    19912   6112944      305 475
+             London      70288  10687889      152 159
+
+a/b, Ki      startpos      122    158506    1 299 229
+             London       6752   8792734    1 326 191
+
+a/b, Ki, ID  startpos      121    152075    1 256 818
+             London       6047   8649703    1 435 171
+
+London position:
+position startpos moves d2d4 d7d5 c1f4 g8f6 e2e3 c7c5 b1d2 b8c6 c2c3 e7e6 f1d3 f8d6

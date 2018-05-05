@@ -5,11 +5,11 @@ import (
 	"testing"
 )
 
-func Test_int2Fen(t *testing.T) {
+func Test_pc2Fen(t *testing.T) {
 
 	tests := []struct {
 		name string
-		p12  int
+		pc   int // 12 bits
 		want string
 	}{
 		{"", wP, "P"},
@@ -24,8 +24,8 @@ func Test_int2Fen(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.want, func(t *testing.T) {
-			if got := int2Fen(tt.p12); got != tt.want {
-				t.Errorf("int2Fen() = %v, want %v", got, tt.want)
+			if got := pc2Fen(tt.pc); got != tt.want {
+				t.Errorf("pc2Fen() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -75,9 +75,9 @@ func Test_move(t *testing.T) {
 			handlePosition(tt.pos)
 			for ix := 0; ix < len(tt.want); ix += 2 {
 				sq := tt.want[ix]
-				p12 := tt.want[ix+1]
-				if board.sq[sq] != p12 {
-					t.Errorf("%v:  want %v on sq=%v got %v", tt.name, p12, sq, board.sq[sq])
+				pc := tt.want[ix+1]
+				if board.sq[sq] != pc {
+					t.Errorf("%v:  want %v on sq=%v got %v", tt.name, pc, sq, board.sq[sq])
 				}
 			}
 			if board.ep != tt.wantEp {
@@ -91,12 +91,12 @@ func Test_move(t *testing.T) {
 }
 
 func Test_unmove(t *testing.T) {
-	type movStr struct{ fr, to, p12, cp, pr int }
+	type movStr struct{ fr, to, pc, cp, pr int }
 	tests := []struct {
 		name   string
 		pos    string
 		mov    movStr // the move to unmove
-		wantTo int    // p12 on to-sq
+		wantTo int    // pc on to-sq
 		wantSq [2]int // sqNo and content in sq[sqNo]
 	}{
 		{"", "position startpos e2e4 e7e5 g1f3 g8f6 f1c4 f8c5 e1g1", movStr{E1, G1, wK, empty, empty}, empty, [2]int{F1, empty}},
@@ -105,16 +105,16 @@ func Test_unmove(t *testing.T) {
 	for _, tt := range tests {
 		handlePosition(tt.pos)
 		var mv move
-		mv.packMove(tt.mov.fr, tt.mov.to, tt.mov.p12, tt.mov.cp, tt.mov.pr, board.ep, board.castlings)
+		mv.packMove(tt.mov.fr, tt.mov.to, tt.mov.pc, tt.mov.cp, tt.mov.pr, board.ep, board.castlings)
 		board.unmove(mv)
-		if int(tt.mov.p12) != board.sq[tt.mov.fr] {
-			t.Errorf("%v: fr_sq should have %v (%v) but have %v", tt.name, int2Fen(int(tt.mov.p12)), tt.mov.p12, board.sq[tt.mov.fr])
+		if int(tt.mov.pc) != board.sq[tt.mov.fr] {
+			t.Errorf("%v: fr_sq should have %v (%v) but have %v", tt.name, pc2Fen(int(tt.mov.pc)), tt.mov.pc, board.sq[tt.mov.fr])
 		}
 		if tt.wantTo != board.sq[tt.mov.to] {
-			t.Errorf("%v: to_sq should have %v (%v) but have %v", tt.name, int2Fen(tt.wantTo), tt.wantTo, board.sq[tt.mov.to])
+			t.Errorf("%v: to_sq should have %v (%v) but have %v", tt.name, pc2Fen(tt.wantTo), tt.wantTo, board.sq[tt.mov.to])
 		}
 		if tt.wantSq[0] >= 0 && tt.wantSq[1] != board.sq[tt.wantSq[0]] {
-			t.Errorf("%v: sq=%v should have %v (%v) but have %v", tt.name, tt.wantSq[0], int2Fen(tt.wantSq[1]), tt.wantSq[1], board.sq[tt.wantSq[0]])
+			t.Errorf("%v: sq=%v should have %v (%v) but have %v", tt.name, tt.wantSq[0], pc2Fen(tt.wantSq[1]), tt.wantSq[1], board.sq[tt.wantSq[0]])
 		}
 	}
 }
@@ -149,32 +149,32 @@ func Test_setSq(t *testing.T) {
 	board.newGame()
 	tests := []struct {
 		name string
-		p12  int
+		pc   int
 		sq   int
 	}{
-		{"Ke4", fen2Int("K"), E4},
-		{"pe3", fen2Int("p"), E3},
-		{"pe5", fen2Int("p"), E5},
-		{"Qb6", fen2Int("Q"), B6},
-		{"nh6", fen2Int("n"), H6},
+		{"Ke4", fen2pc("K"), E4},
+		{"pe3", fen2pc("p"), E3},
+		{"pe5", fen2pc("p"), E5},
+		{"Qb6", fen2pc("Q"), B6},
+		{"nh6", fen2pc("n"), H6},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			count := board.count[tt.p12]
-			board.setSq(tt.p12, tt.sq)
-			if board.sq[tt.sq] != tt.p12 {
-				t.Errorf("%v: board should contain %v on sq=%v. Got %v", tt.name, tt.p12, tt.sq, board.sq[tt.sq])
+			count := board.count[tt.pc]
+			board.setSq(tt.pc, tt.sq)
+			if board.sq[tt.sq] != tt.pc {
+				t.Errorf("%v: board should contain %v on sq=%v. Got %v", tt.name, tt.pc, tt.sq, board.sq[tt.sq])
 			}
-			pc := piece(tt.p12)
-			sd := p12Color(tt.p12)
+			pt := pc2pt(tt.pc)
+			sd := pcColor(tt.pc)
 			if !board.wbBB[sd].test(tt.sq) {
 				t.Errorf("%v: wbBB[%v] on sq=%v should be set to 1 but is 0", tt.name, sd, tt.sq)
 			}
-			if !board.pieceBB[pc].test(tt.sq) {
-				t.Errorf("%v: pieceBB[%v] on sq=%v should be set to 1 but is 0", tt.name, pc, tt.sq)
+			if !board.pieceBB[pt].test(tt.sq) {
+				t.Errorf("%v: pieceBB[%v] on sq=%v should be set to 1 but is 0", tt.name, pt, tt.sq)
 			}
-			if board.count[tt.p12] != count+1 {
-				t.Errorf("%v: count[%v] should be %v. Got %v", tt.name, tt.p12, count+1, board.count[tt.p12])
+			if board.count[tt.pc] != count+1 {
+				t.Errorf("%v: count[%v] should be %v. Got %v", tt.name, tt.pc, count+1, board.count[tt.pc])
 			}
 		})
 	}
@@ -543,7 +543,7 @@ func Test_boardStruct_genPawnCapt(t *testing.T) {
 func Benchmark_genRookMoves(b *testing.B) {
 	// run the genRook function b.N times
 	var ml moveList
-	initFenSq2Int()
+	initFen2Sq()
 	initMagic()
 	initAtksKings()
 	initAtksKnights()
@@ -559,7 +559,7 @@ func Benchmark_genRookMoves(b *testing.B) {
 func Benchmark_genSimpleRookMoves(b *testing.B) {
 	// run the genRook function b.N times
 	var ml = moveList{}
-	initFenSq2Int()
+	initFen2Sq()
 	initMagic()
 	initAtksKings()
 	initAtksKnights()
@@ -576,8 +576,8 @@ func findMoves(mlf *moveList, mvs []string) (bool, move) {
 	found := false
 	var mv1 move
 	for _, mvStr := range mvs {
-		fr := fenSq2Int[mvStr[:2]]
-		to := fenSq2Int[mvStr[2:4]]
+		fr := fen2Sq[mvStr[:2]]
+		to := fen2Sq[mvStr[2:4]]
 		cp := board.sq[to]
 		if cp == empty && (board.sq[fr] == wP || board.sq[fr] == bP) && to == board.ep { // ep
 			cp = wP
@@ -587,7 +587,7 @@ func findMoves(mlf *moveList, mvs []string) (bool, move) {
 		}
 		pr := empty
 		if len(mvStr) >= 5 {
-			pr = fen2Int(mvStr[4:5])
+			pr = fen2pc(mvStr[4:5])
 		}
 		mv1 = noMove
 		mv1.packMove(fr, to, board.sq[fr], cp, pr, board.ep, board.castlings)

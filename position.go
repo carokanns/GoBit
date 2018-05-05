@@ -8,8 +8,8 @@ import (
 
 // various consts
 const (
-	nP12     = 12
-	nP       = 6
+	nPc      = 12
+	nPt      = 6
 	WHITE    = color(0)
 	BLACK    = color(1)
 	startpos = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - "
@@ -148,7 +148,7 @@ func initAtksKings() {
 type boardStruct struct {
 	sq      [64]int
 	wbBB    [2]bitBoard
-	pieceBB [nP]bitBoard
+	pieceBB [nPt]bitBoard
 	King    [2]int
 	ep      int
 	castlings
@@ -181,13 +181,13 @@ func (b *boardStruct) clear() {
 		b.sq[ix] = empty
 	}
 
-	for ix := 0; ix < nP12; ix++ {
+	for ix := wP; ix < nPc; ix++ {
 		b.count[ix] = 0
 	}
 
 	// bitBoards
 	b.wbBB[WHITE], b.wbBB[BLACK] = 0, 0
-	for ix := 0; ix < nP; ix++ {
+	for ix := 0; ix < nPt; ix++ {
 		b.pieceBB[ix] = 0
 	}
 }
@@ -199,9 +199,9 @@ func (b *boardStruct) move(mv move) bool {
 	fr := mv.fr()
 	to := mv.to()
 	pr := mv.pr()
-	p12 := b.sq[fr]
+	pc := b.sq[fr]
 	switch {
-	case p12 == wK:
+	case pc == wK:
 		b.castlings.off(shortW | longW)
 		if abs(int(to)-int(fr)) == 2 {
 			if to == G1 {
@@ -212,7 +212,7 @@ func (b *boardStruct) move(mv move) bool {
 				b.setSq(empty, A1)
 			}
 		}
-	case p12 == bK:
+	case pc == bK:
 		b.castlings.off(shortB | longB)
 		if abs(int(to)-int(fr)) == 2 {
 			if to == G8 {
@@ -223,20 +223,20 @@ func (b *boardStruct) move(mv move) bool {
 				b.setSq(empty, A8)
 			}
 		}
-	case p12 == wR:
+	case pc == wR:
 		if fr == A1 {
 			b.off(longW)
 		} else if fr == H1 {
 			b.off(shortW)
 		}
-	case p12 == bR:
+	case pc == bR:
 		if fr == A8 {
 			b.off(longB)
 		} else if fr == H8 {
 			b.off(shortB)
 		}
 
-	case p12 == wP && b.sq[to] == empty: // ep move or set ep
+	case pc == wP && b.sq[to] == empty: // ep move or set ep
 		if to-fr == 16 {
 			newEp = fr + 8
 		} else if to-fr == 7 { // must be ep
@@ -244,7 +244,7 @@ func (b *boardStruct) move(mv move) bool {
 		} else if to-fr == 9 { // must be ep
 			b.setSq(empty, to-8)
 		}
-	case p12 == bP && b.sq[to] == empty: //  ep move or set ep
+	case pc == bP && b.sq[to] == empty: //  ep move or set ep
 		if fr-to == 16 {
 			newEp = to + 8
 		} else if fr-to == 7 { // must be ep
@@ -259,7 +259,7 @@ func (b *boardStruct) move(mv move) bool {
 	if pr != empty {
 		b.setSq(pr, to)
 	} else {
-		b.setSq(p12, to)
+		b.setSq(pc, to)
 	}
 
 	b.stm = b.stm ^ 0x1
@@ -274,14 +274,14 @@ func (b *boardStruct) move(mv move) bool {
 func (b *boardStruct) unmove(mv move) {
 	b.ep = mv.ep()
 	b.castlings = mv.castl()
-	p12 := int(mv.p12())
+	pc := int(mv.pc())
 	fr := int(mv.fr())
 	to := int(mv.to())
-	
-	b.setSq(mv.cp(), to)
-	b.setSq(p12, fr)
 
-	if piece(p12) == Pawn {
+	b.setSq(mv.cp(), to)
+	b.setSq(pc, fr)
+
+	if pc2pt(pc) == Pawn {
 		if to == b.ep && b.ep != 0 { // ep move
 			b.setSq(empty, to)
 			switch to - fr {
@@ -290,9 +290,9 @@ func (b *boardStruct) unmove(mv move) {
 			case SW, SE:
 				b.setSq(wP, to-S)
 			}
-		} 
-	} else if piece(p12) == King {
-		sd := p12Color(p12)
+		}
+	} else if pc2pt(pc) == King {
+		sd := pcColor(pc)
 		if fr-to == 2 { // long castling
 			b.setSq(castl[sd].rook, int(castl[sd].rookL))
 			b.setSq(empty, fr-1)
@@ -304,35 +304,35 @@ func (b *boardStruct) unmove(mv move) {
 	b.stm = b.stm ^ 0x1
 }
 
-func (b *boardStruct) setSq(p12, sq int) {
-	p := piece(p12)
-	sd := p12Color(p12)
+func (b *boardStruct) setSq(pc, sq int) {
+	pt := pc2pt(pc)
+	sd := pcColor(pc)
 
 	if b.sq[sq] != empty { // capture
 		cp := b.sq[sq]
 		b.count[cp]--
 		b.wbBB[sd^0x1].clr(sq)
-		b.pieceBB[piece(cp)].clr(sq)
+		b.pieceBB[pc2pt(cp)].clr(sq)
 	}
-	b.sq[sq] = p12
+	b.sq[sq] = pc
 
-	if p12 == empty {
+	if pc == empty {
 		b.wbBB[WHITE].clr(sq)
 		b.wbBB[BLACK].clr(sq)
-		for p := 0; p < nP; p++ {
+		for p := 0; p < nPt; p++ {
 			b.pieceBB[p].clr(sq)
 		}
 		return
 	}
 
-	b.count[p12]++
+	b.count[pc]++
 
-	if p == King {
+	if pt == King {
 		b.King[sd] = sq
 	}
 
 	b.wbBB[sd].set(sq)
-	b.pieceBB[p].set(sq)
+	b.pieceBB[pt].set(sq)
 }
 
 func (b *boardStruct) newGame() {
@@ -432,12 +432,12 @@ func (b *boardStruct) isLongOk(sd color) bool {
 func (b *boardStruct) genRookMoves(ml *moveList, targetBB bitBoard) {
 	sd := b.stm
 	allRBB := b.pieceBB[Rook] & b.wbBB[sd]
-	p12 := pc2P12(Rook, color(sd))
+	pc := pt2pc(Rook, color(sd))
 	var mv move
 	for fr := allRBB.firstOne(); fr != 64; fr = allRBB.firstOne() {
 		toBB := mRookTab[fr].atks(b.allBB()) & targetBB
 		for to := toBB.firstOne(); to != 64; to = toBB.firstOne() {
-			mv.packMove(fr, to, p12, b.sq[to], empty, b.ep, b.castlings)
+			mv.packMove(fr, to, pc, b.sq[to], empty, b.ep, b.castlings)
 			ml.add(mv)
 		}
 	}
@@ -446,7 +446,7 @@ func (b *boardStruct) genRookMoves(ml *moveList, targetBB bitBoard) {
 func (b *boardStruct) genBishopMoves(ml *moveList, targetBB bitBoard) {
 	sd := b.stm
 	allBBB := b.pieceBB[Bishop] & b.wbBB[sd]
-	p12 := pc2P12(Bishop, color(sd))
+	pc := pt2pc(Bishop, color(sd))
 	ep := b.ep
 	castlings := b.castlings
 	var mv move
@@ -454,7 +454,7 @@ func (b *boardStruct) genBishopMoves(ml *moveList, targetBB bitBoard) {
 	for fr := allBBB.firstOne(); fr != 64; fr = allBBB.firstOne() {
 		toBB := mBishopTab[fr].atks(b.allBB()) & targetBB
 		for to := toBB.lastOne(); to != 64; to = toBB.lastOne() {
-			mv.packMove(fr, to, p12, b.sq[to], empty, ep, castlings)
+			mv.packMove(fr, to, pc, b.sq[to], empty, ep, castlings)
 			ml.add(mv)
 		}
 	}
@@ -463,7 +463,7 @@ func (b *boardStruct) genBishopMoves(ml *moveList, targetBB bitBoard) {
 func (b *boardStruct) genQueenMoves(mlq *moveList, targetBB bitBoard) {
 	sd := b.stm
 	allQBB := b.pieceBB[Queen] & b.wbBB[sd]
-	p12 := int(pc2P12(Queen, color(sd)))
+	pc := pt2pc(Queen, color(sd))
 	ep := b.ep
 	castlings := b.castlings
 	var mv move
@@ -472,7 +472,7 @@ func (b *boardStruct) genQueenMoves(mlq *moveList, targetBB bitBoard) {
 		toBB := mBishopTab[fr].atks(b.allBB()) & targetBB
 		toBB |= mRookTab[fr].atks(b.allBB()) & targetBB
 		for to := toBB.firstOne(); to != 64; to = toBB.firstOne() {
-			mv.packMove(fr, to, p12, b.sq[to], empty, ep, castlings)
+			mv.packMove(fr, to, pc, b.sq[to], empty, ep, castlings)
 			mlq.add(mv)
 		}
 	}
@@ -481,14 +481,14 @@ func (b *boardStruct) genQueenMoves(mlq *moveList, targetBB bitBoard) {
 func (b *boardStruct) genKnightMoves(ml *moveList, targetBB bitBoard) {
 	sd := b.stm
 	allNBB := b.pieceBB[Knight] & b.wbBB[sd]
-	p12 := int(pc2P12(Knight, color(sd)))
+	pc := pt2pc(Knight, color(sd))
 	ep := b.ep
 	castlings := b.castlings
 	var mv move
 	for fr := allNBB.firstOne(); fr != 64; fr = allNBB.firstOne() {
 		toBB := atksKnights[fr] & targetBB
 		for to := toBB.firstOne(); to != 64; to = toBB.firstOne() {
-			mv.packMove(fr, to, p12, b.sq[to], empty, ep, castlings)
+			mv.packMove(fr, to, pc, b.sq[to], empty, ep, castlings)
 			ml.add(mv)
 		}
 	}
@@ -497,14 +497,14 @@ func (b *boardStruct) genKnightMoves(ml *moveList, targetBB bitBoard) {
 func (b *boardStruct) genKingMoves(ml *moveList, targetBB bitBoard) {
 	sd := b.stm
 	// 'normal' moves
-	p12 := int(pc2P12(King, color(sd)))
+	pc := pt2pc(King, color(sd))
 	ep := b.ep
 	castlings := b.castlings
 	var mv move
 
 	toBB := atksKings[b.King[sd]] & targetBB
 	for to := toBB.firstOne(); to != 64; to = toBB.firstOne() {
-		mv.packMove(b.King[sd], to, p12, b.sq[to], empty, ep, castlings)
+		mv.packMove(b.King[sd], to, pc, b.sq[to], empty, ep, castlings)
 		ml.add(mv)
 	}
 
@@ -850,7 +850,6 @@ func (b *boardStruct) genBPawnCapt(ml *moveList) {
 	}
 }
 
-
 // W pawns moves that doesn't capture aand not promotions
 func (b *boardStruct) genWPawnNonCapt(ml *moveList) {
 	var mv move
@@ -907,7 +906,7 @@ func (b *boardStruct) genAllMoves(ml *moveList) {
 	b.genKingMoves(ml, ^b.wbBB[b.stm])
 }
 
-func (b *boardStruct) genAllCaptures(ml *moveList){
+func (b *boardStruct) genAllCaptures(ml *moveList) {
 	oppBB := b.wbBB[b.stm.opp()]
 	b.genPawnCapt(ml)
 	b.genKnightMoves(ml, oppBB)
@@ -917,7 +916,7 @@ func (b *boardStruct) genAllCaptures(ml *moveList){
 	b.genKingMoves(ml, oppBB)
 }
 
-func (b *boardStruct) genAllNonCaptures(ml *moveList){
+func (b *boardStruct) genAllNonCaptures(ml *moveList) {
 	emptyBB := ^b.allBB()
 	b.genPawnCapt(ml)
 	b.genKnightMoves(ml, emptyBB)
@@ -945,7 +944,7 @@ func (b *boardStruct) filterLegals(ml *moveList) {
 	}
 }
 
-func (b *boardStruct) genFrMoves(p12 int, toBB bitBoard, ml *moveList) {
+func (b *boardStruct) genFrMoves(pc int, toBB bitBoard, ml *moveList) {
 
 }
 
@@ -1122,7 +1121,7 @@ func (b *boardStruct) Print() {
 			if b.sq[ix] == bP {
 				fmt.Printf("   o  |")
 			} else {
-				fmt.Printf("   %v  |", int2Fen(b.sq[ix]))
+				fmt.Printf("   %v  |", pc2Fen(b.sq[ix]))
 			}
 		}
 		fmt.Println()
@@ -1198,12 +1197,12 @@ func parseFEN(FEN string) {
 				continue
 			}
 
-			if strings.IndexAny(p12ToFen, char) == -1 {
+			if strings.IndexAny(pcFen, char) == -1 {
 				tell("info string invalid piece ", char, " try next one")
 				continue
 			}
 
-			board.setSq(fen2Int(char), sq)
+			board.setSq(fen2pc(char), sq)
 
 			sq++
 		}
@@ -1236,7 +1235,7 @@ func parseFEN(FEN string) {
 	board.ep = 0
 	if len(remaining) > 2 {
 		if remaining[2] != "-" {
-			board.ep = fenSq2Int[remaining[2]]
+			board.ep = fen2Sq[remaining[2]]
 		}
 	}
 
@@ -1269,25 +1268,25 @@ func parseMvs(mvstr string) {
 			return
 		}
 		// is fr square ok?
-		fr, ok := fenSq2Int[mv[:2]]
+		fr, ok := fen2Sq[mv[:2]]
 		if !ok {
 			tell("info string ", mv, " in the position command is not a correct fr square")
 			return
 		}
 
-		p12 := board.sq[fr]
-		if p12 == empty {
+		pc := board.sq[fr]
+		if pc == empty {
 			tell("info string ", mv, " in the position command. fr_sq is an empty square")
 			return
 		}
-		pCol := p12Color(p12)
-		if pCol != board.stm {
+		pcCol := pcColor(pc)
+		if pcCol != board.stm {
 			tell("info string ", mv, " in the position command. fr piece has the wrong color")
 			return
 		}
 
 		// is to square ok?
-		to, ok := fenSq2Int[mv[2:4]]
+		to, ok := fen2Sq[mv[2:4]]
 		if !ok {
 			tell("info string ", mv, " in the position has an incorrect to square")
 			return
@@ -1300,13 +1299,14 @@ func parseMvs(mvstr string) {
 				tell("info string promotion piece in ", mv, " in the position command is not correct")
 				return
 			}
-			pr = fen2Int(mv[4:5])
-			pr = pc2P12(pr, board.stm)
+			pr = fen2pc(mv[4:5])
+			pt := pc2pt(pr)
+			pr = pt2pc(pt, board.stm)
 		}
 		cp := board.sq[to]
 
 		var intMv move // internal move format
-		intMv.packMove(fr, to, p12, cp, pr, board.ep, board.castlings)
+		intMv.packMove(fr, to, pc, cp, pr, board.ep, board.castlings)
 
 		if !board.move(intMv) {
 			tell(fmt.Sprintf("tell info string %v-%v is an illegal move", sq2Fen[fr], sq2Fen[to]))
@@ -1328,9 +1328,9 @@ func min(a, b int) int {
 	return b
 }
 
-// fen2Int convert pieceString to p12 int
-func fen2Int(c string) int {
-	for p, x := range p12ToFen {
+// fen2pc convert pieceString to pc int
+func fen2pc(c string) int {
+	for p, x := range pcFen {
 		if string(x) == c {
 			return p
 		}
@@ -1338,108 +1338,108 @@ func fen2Int(c string) int {
 	return empty
 }
 
-// int2fen convert p12 to fenString
-func int2Fen(p12 int) string {
-	if p12 == empty {
+// pc2Fen convert pc to fenString
+func pc2Fen(pc int) string {
+	if pc == empty {
 		return " "
 	}
-	return string(p12ToFen[p12])
+	return string(pcFen[pc])
 }
 
-// piece returns the pc from p12
-func piece(p12 int) int {
-	return p12 >> 1
+// pc2pt returns the pt from pc
+func pc2pt(pc int) int {
+	return pc >> 1
 }
 
-// p12Color returns the color of a p12 form
-func p12Color(p12 int) color {
-	return color(p12 & 0x1)
+// pcColor returns the color of a pc form
+func pcColor(pc int) color {
+	return color(pc & 0x1)
 }
 
-// pc2P12 returns p12 from pc and sd
-func pc2P12(pc int, sd color) int {
-	return (pc << 1) | int(sd)
+// pt2pc returns pc from pt and sd
+func pt2pc(pt int, sd color) int {
+	return (pt << 1) | int(sd)
 }
 
 // map fen-sq to int
-var fenSq2Int = make(map[string]int)
+var fen2Sq = make(map[string]int)
 
 // map int-sq to fen
 var sq2Fen = make(map[int]string)
 
 // init the square map from string to int and int to string
-func initFenSq2Int() {
-	fenSq2Int["a1"] = A1
-	fenSq2Int["a2"] = A2
-	fenSq2Int["a3"] = A3
-	fenSq2Int["a4"] = A4
-	fenSq2Int["a5"] = A5
-	fenSq2Int["a6"] = A6
-	fenSq2Int["a7"] = A7
-	fenSq2Int["a8"] = A8
+func initFen2Sq() {
+	fen2Sq["a1"] = A1
+	fen2Sq["a2"] = A2
+	fen2Sq["a3"] = A3
+	fen2Sq["a4"] = A4
+	fen2Sq["a5"] = A5
+	fen2Sq["a6"] = A6
+	fen2Sq["a7"] = A7
+	fen2Sq["a8"] = A8
 
-	fenSq2Int["b1"] = B1
-	fenSq2Int["b2"] = B2
-	fenSq2Int["b3"] = B3
-	fenSq2Int["b4"] = B4
-	fenSq2Int["b5"] = B5
-	fenSq2Int["b6"] = B6
-	fenSq2Int["b7"] = B7
-	fenSq2Int["b8"] = B8
+	fen2Sq["b1"] = B1
+	fen2Sq["b2"] = B2
+	fen2Sq["b3"] = B3
+	fen2Sq["b4"] = B4
+	fen2Sq["b5"] = B5
+	fen2Sq["b6"] = B6
+	fen2Sq["b7"] = B7
+	fen2Sq["b8"] = B8
 
-	fenSq2Int["c1"] = C1
-	fenSq2Int["c2"] = C2
-	fenSq2Int["c3"] = C3
-	fenSq2Int["c4"] = C4
-	fenSq2Int["c5"] = C5
-	fenSq2Int["c6"] = C6
-	fenSq2Int["c7"] = C7
-	fenSq2Int["c8"] = C8
+	fen2Sq["c1"] = C1
+	fen2Sq["c2"] = C2
+	fen2Sq["c3"] = C3
+	fen2Sq["c4"] = C4
+	fen2Sq["c5"] = C5
+	fen2Sq["c6"] = C6
+	fen2Sq["c7"] = C7
+	fen2Sq["c8"] = C8
 
-	fenSq2Int["d1"] = D1
-	fenSq2Int["d2"] = D2
-	fenSq2Int["d3"] = D3
-	fenSq2Int["d4"] = D4
-	fenSq2Int["d5"] = D5
-	fenSq2Int["d6"] = D6
-	fenSq2Int["d7"] = D7
-	fenSq2Int["d8"] = D8
+	fen2Sq["d1"] = D1
+	fen2Sq["d2"] = D2
+	fen2Sq["d3"] = D3
+	fen2Sq["d4"] = D4
+	fen2Sq["d5"] = D5
+	fen2Sq["d6"] = D6
+	fen2Sq["d7"] = D7
+	fen2Sq["d8"] = D8
 
-	fenSq2Int["e1"] = E1
-	fenSq2Int["e2"] = E2
-	fenSq2Int["e3"] = E3
-	fenSq2Int["e4"] = E4
-	fenSq2Int["e5"] = E5
-	fenSq2Int["e6"] = E6
-	fenSq2Int["e7"] = E7
-	fenSq2Int["e8"] = E8
+	fen2Sq["e1"] = E1
+	fen2Sq["e2"] = E2
+	fen2Sq["e3"] = E3
+	fen2Sq["e4"] = E4
+	fen2Sq["e5"] = E5
+	fen2Sq["e6"] = E6
+	fen2Sq["e7"] = E7
+	fen2Sq["e8"] = E8
 
-	fenSq2Int["f1"] = F1
-	fenSq2Int["f2"] = F2
-	fenSq2Int["f3"] = F3
-	fenSq2Int["f4"] = F4
-	fenSq2Int["f5"] = F5
-	fenSq2Int["f6"] = F6
-	fenSq2Int["f7"] = F7
-	fenSq2Int["f8"] = F8
+	fen2Sq["f1"] = F1
+	fen2Sq["f2"] = F2
+	fen2Sq["f3"] = F3
+	fen2Sq["f4"] = F4
+	fen2Sq["f5"] = F5
+	fen2Sq["f6"] = F6
+	fen2Sq["f7"] = F7
+	fen2Sq["f8"] = F8
 
-	fenSq2Int["g1"] = G1
-	fenSq2Int["g2"] = G2
-	fenSq2Int["g3"] = G3
-	fenSq2Int["g4"] = G4
-	fenSq2Int["g5"] = G5
-	fenSq2Int["g6"] = G6
-	fenSq2Int["g7"] = G7
-	fenSq2Int["g8"] = G8
+	fen2Sq["g1"] = G1
+	fen2Sq["g2"] = G2
+	fen2Sq["g3"] = G3
+	fen2Sq["g4"] = G4
+	fen2Sq["g5"] = G5
+	fen2Sq["g6"] = G6
+	fen2Sq["g7"] = G7
+	fen2Sq["g8"] = G8
 
-	fenSq2Int["h1"] = H1
-	fenSq2Int["h2"] = H2
-	fenSq2Int["h3"] = H3
-	fenSq2Int["h4"] = H4
-	fenSq2Int["h5"] = H5
-	fenSq2Int["h6"] = H6
-	fenSq2Int["h7"] = H7
-	fenSq2Int["h8"] = H8
+	fen2Sq["h1"] = H1
+	fen2Sq["h2"] = H2
+	fen2Sq["h3"] = H3
+	fen2Sq["h4"] = H4
+	fen2Sq["h5"] = H5
+	fen2Sq["h6"] = H6
+	fen2Sq["h7"] = H7
+	fen2Sq["h8"] = H8
 
 	// -------------- sq2Fen
 	sq2Fen[A1] = "a1"
@@ -1525,7 +1525,7 @@ const (
 	King
 )
 
-// 12 pieces with color (P12)
+// 12 pieces with color plus empty
 const (
 	wP = iota
 	bP
@@ -1544,8 +1544,8 @@ const (
 
 // piece char definitions
 const (
-	pc2Char  = "PNBRQK?"
-	p12ToFen = "PpNnBbRrQqKk     "
+	pcFen = "PpNnBbRrQqKk     "
+	ptFen = "PNBRQK?"
 )
 
 // square names
@@ -1626,7 +1626,7 @@ const (
 //////////////////////////////// TODO: remove this after benchmarking ////////////////////////////////////////
 func (b *boardStruct) genSimpleRookMoves(ml *moveList, sd color) {
 	allRBB := b.pieceBB[Rook] & b.wbBB[sd]
-	p12 := int(pc2P12(Rook, color(sd)))
+	pc := pt2pc(Rook, color(sd))
 	ep := b.ep
 	castlings := b.castlings
 	var mv move
@@ -1637,10 +1637,10 @@ func (b *boardStruct) genSimpleRookMoves(ml *moveList, sd color) {
 		for r := rk + 1; r < 8; r++ {
 			to := r*8 + fl
 			cp := b.sq[to]
-			if cp != empty && p12Color(int(cp)) == sd {
+			if cp != empty && pcColor(int(cp)) == sd {
 				break
 			}
-			mv.packMove(fr, to, p12, cp, empty, ep, castlings)
+			mv.packMove(fr, to, pc, cp, empty, ep, castlings)
 			ml.add(mv)
 			if cp != empty {
 				break
@@ -1650,10 +1650,10 @@ func (b *boardStruct) genSimpleRookMoves(ml *moveList, sd color) {
 		for r := rk - 1; r >= 0; r-- {
 			to := r*8 + fl
 			cp := b.sq[to]
-			if cp != empty && p12Color(int(cp)) == sd {
+			if cp != empty && pcColor(int(cp)) == sd {
 				break
 			}
-			mv.packMove(fr, to, p12, cp, empty, ep, castlings)
+			mv.packMove(fr, to, pc, cp, empty, ep, castlings)
 			ml.add(mv)
 			if cp != empty {
 				break
@@ -1663,10 +1663,10 @@ func (b *boardStruct) genSimpleRookMoves(ml *moveList, sd color) {
 		for f := fl + 1; f < 8; f++ {
 			to := rk*8 + f
 			cp := b.sq[to]
-			if cp != empty && p12Color(int(cp)) == sd {
+			if cp != empty && pcColor(int(cp)) == sd {
 				break
 			}
-			mv.packMove(fr, to, p12, cp, empty, ep, castlings)
+			mv.packMove(fr, to, pc, cp, empty, ep, castlings)
 			ml.add(mv)
 			if cp != empty {
 				break
@@ -1676,10 +1676,10 @@ func (b *boardStruct) genSimpleRookMoves(ml *moveList, sd color) {
 		for f := fl - 1; f >= 0; f-- {
 			to := rk*8 + f
 			cp := b.sq[to]
-			if cp != empty && p12Color(int(cp)) == sd {
+			if cp != empty && pcColor(int(cp)) == sd {
 				break
 			}
-			mv.packMove(fr, to, p12, cp, empty, ep, castlings)
+			mv.packMove(fr, to, pc, cp, empty, ep, castlings)
 			ml.add(mv)
 			if cp != empty {
 				break

@@ -1,4 +1,3 @@
-
 package main
 
 import (
@@ -35,21 +34,21 @@ func Test_Uci(t *testing.T) {
 		{"position no cmd", "position", []string{"info string Error[] wrong length=1"}},
 		{"pos incorrect move 1", "position startpos moves e2j4", []string{"info string e2j4 in the position has an incorrect to square"}},
 		{"pos incorrect move 2", "position startpos moves e3e4", []string{"info string e3e4 in the position command. fr_sq is an empty square"}},
-	//	{"pos incorrect move 3", "position startpos moves e2e4 e7e5 e4e5", []string{"info string e4e5 in moves within the postion commad is not a corect move"}},
+		//	{"pos incorrect move 3", "position startpos moves e2e4 e7e5 e4e5", []string{"info string e4e5 in moves within the postion commad is not a corect move"}},
 		{"ponderhit", "ponderhit", []string{"info string ponderhit not implemented"}},
 		{"debug", "debug on", []string{"info string debug not implemented"}},
-	//	{"go movetime", "go movetime 1000", []string{"info string engine got go! X"}},
+		//	{"go movetime", "go movetime 1000", []string{"info string engine got go! X"}},
 		{"go movestogo", "go movestogo 20", []string{"info string go movestogo not implemented"}},
 		{"go wtime", "go wtime 10000", []string{"info string go wtime not implemented"}},
 		{"go btime", "go btime 11000", []string{"info string go btime not implemented"}},
 		{"go winc", "go winc 500", []string{"info string go winc not implemented"}},
 		{"go binc", "go binc 500", []string{"info string go binc not implemented"}},
-	//	{"go depth", "go depth 7", []string{"info string go depth not implemented"}},
+		//	{"go depth", "go depth 7", []string{"info string go depth not implemented"}},
 		{"go nodes", "go nodes 11000", []string{"info string go nodes not implemented"}},
 		{"go mate", "go mate 11000", []string{"info string go mate not implemented"}},
 		{"go ponder", "go ponder", []string{"info string go ponder not implemented"}},
-	//	{"go infinte", "go infinite", []string{"info string go infinite not implemented"}},
-			{"wrong cmd", "skit", []string{"info string unknown cmd"}},
+		//	{"go infinte", "go infinite", []string{"info string go infinite not implemented"}},
+		{"wrong cmd", "skit", []string{"info string unknown cmd"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -74,16 +73,16 @@ func Test_Uci(t *testing.T) {
 	}
 }
 
-func Test_handleStop(t *testing.T){
+func Test_handleStop(t *testing.T) {
 	tests := []struct {
-		name  string
-		saveBm string 
+		name     string
+		saveBm   string
 		infinite bool
-		want bool
+		want     bool
 	}{
-			{"stop","bestmove a1h8", true,false},
-			{"stop","", true,false},
-			{"stop","", false,false},
+		{"stop", "bestmove a1h8", true, false},
+		{"stop", "", true, false},
+		{"stop", "", false, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -96,7 +95,7 @@ func Test_handleStop(t *testing.T){
 			if limits.stop != true {
 				t.Errorf("%v: limits.stop should be %v but is %v", tt.name, true, limits.stop)
 			}
-			if saveBm  != "" {
+			if saveBm != "" {
 				t.Errorf("%v: saveBm should be %v but is %v", tt.name, "", saveBm)
 			}
 		})
@@ -104,7 +103,7 @@ func Test_handleStop(t *testing.T){
 }
 
 func Test_handlePosition(t *testing.T) {
-	type arg struct{ sq, p12 int }
+	type arg struct{ sq, pc int }
 	tests := []struct {
 		name  string
 		cmd   string
@@ -118,8 +117,8 @@ func Test_handlePosition(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			handlePosition(tt.cmd)
 			for _, arg := range tt.args {
-				if board.sq[arg.sq] != arg.p12 {
-					t.Errorf("%v: sq=%v should be %v but is %v", tt.name, arg.sq, arg.p12, board.sq[arg.sq])
+				if board.sq[arg.sq] != arg.pc {
+					t.Errorf("%v: sq=%v should be %v but is %v", tt.name, arg.sq, arg.pc, board.sq[arg.sq])
 				}
 			}
 			if board.castlings != tt.castl {

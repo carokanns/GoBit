@@ -14,7 +14,6 @@ const (
 
 var cntNodes uint64
 
-//TODO search limits: start clock and testing for movetime
 //TODO search limits: counting nodes and testing for limit.nodes
 //TODO search limits: limit.depth
 
@@ -95,8 +94,6 @@ func engine() (toEngine chan bool, frEngine chan string) {
 	return
 }
 
-//TODO root: Iterative Depening
-
 //TODO root: Aspiration search
 func root(toEngine chan bool, frEngine chan string) {
 	var depth int
@@ -152,8 +149,8 @@ func root(toEngine chan bool, frEngine chan string) {
 	}
 }
 
-//TODO search: generate all moves and put captures first  (temporary)
-//TODO search: qs
+//TODO search: qs with SEE
+
 //TODO search: hash table/transposition table
 //TODO search: history table and maybe counter move table
 //TODO search: move generation. More fast and accurate
@@ -215,6 +212,146 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 		}
 	}
 	return bs
+}
+
+func initQS(ml *moveList, b *boardStruct){
+	ml.clear()
+	b.genAllCaptures(ml)
+}
+func qs(beta int, b *boardStruct) int{
+	ev := signEval(b.stm, evaluate(b))
+	if ev >= beta {
+		// we are good. No need to try captures
+		return ev
+	}
+	bs := ev
+
+	qsList := make(moveList,0,60)
+	initQS(&qsList,b) // create attacks
+
+	done:=bitBoard(0)
+
+	// move loop
+	for _,mv := range qsList{
+		fr:=mv.fr()
+		to:=mv.to()
+
+		// This works because we pick lower value pieces first 
+		if done.test(to) {// Don't do the same to-sw again
+			continue
+		}
+		done.set(to)
+
+		see := see(fr,to,b)
+
+		if see < 0 {
+			continue // equal captures not interesting
+		}
+		if see == 0 && mv.cp() == empty {
+			// must be a promotion that didn't captureand was not captured
+			see = pieceVal[wQ] - pieceVal[wP]
+		}
+
+		sc := ev+see
+		if sc > bs {
+			bs = sc 
+			if sc >= beta {
+				return sc
+			}
+		}
+	}
+
+	return bs
+}
+// see (Static Echange Evaluation)
+// Start with the capture fr-to and find out all the other captures to to-sq
+func see(fr, to int, b *boardStruct) int {
+	pc := b.sq[fr]
+	cp := b.sq[to]
+	cnt := 1
+	us := pcColor(pc)
+	them := us.opp()
+
+	// All the attackers to the to-sq, but first remove the moving piece and use X-ray to the to-sq
+	occ := b.allBB()
+	occ.clr(fr)
+	attackingBB := mRookTab[to].atks(occ)&(b.pieceBB[Rook]|b.pieceBB[Queen]) |
+		mBishopTab[to].atks(occ)&(b.pieceBB[Bishop]|b.pieceBB[Queen]) |
+		(atksKnights[to] & b.pieceBB[Knight]) |
+		(atksKings[to] & b.pieceBB[King]) |
+		(b.wPawnAtksFr(to) & b.pieceBB[Pawn] & b.wbBB[BLACK]) |
+		(b.bPawnAtksFr(to) & b.pieceBB[Pawn] & b.wbBB[WHITE])
+	attackingBB &= occ
+
+	if (attackingBB & b.wbBB[them]) == 0 { // 'they' have no attackers - good bye
+		return abs(pieceVal[cp]) // always return score from 'our' point of view
+	}
+
+	// Now we continue to keep track of the material gain/loss for each capture
+	// Always remove the last attacker and use x-ray to find possible new attackers
+
+	lastAtkVal := abs(pieceVal[pc])  // save attacker piece value for later use
+	var captureList [32]int
+	n := 1
+
+	stm := them // change side to move
+	var pt int
+	var BB bitBoard
+
+	for {
+		cnt++
+		switch { // select the least valuable attacker
+		case (attackingBB & b.pieceBB[Pawn] & b.wbBB[stm]) != 0:
+			pt = Pawn
+		case (attackingBB & b.pieceBB[Knight] & b.wbBB[stm]) != 0:
+			pt = Knight
+		case (attackingBB & b.pieceBB[Bishop] & b.wbBB[stm]) != 0:
+			pt = Bishop
+		case (attackingBB & b.pieceBB[Rook] & b.wbBB[stm]) != 0:
+			pt = Rook
+		case (attackingBB & b.pieceBB[Queen] & b.wbBB[stm]) != 0:
+			pt = Queen
+		case (attackingBB & b.pieceBB[King] & b.wbBB[stm]) != 0:
+			pt = King
+		default:
+			panic("Don't come here in see! ")
+		}
+
+		// now remove the pt above from the attackingBB and scan for new attackers by possible x-ray
+		BB = attackingBB & (attackingBB & b.pieceBB[pt] & b.wbBB[stm])
+		occ ^= (BB & -BB) // turn off the rightmost bit from BB in occ
+
+		//  pick sliding attacks again (do it from to-sq)
+		attackingBB |= mRookTab[to].atks(occ)&(b.pieceBB[Rook]|b.pieceBB[Queen]) |
+			mBishopTab[to].atks(occ)&(b.pieceBB[Bishop]|b.pieceBB[Queen])
+		attackingBB &= occ // but only attacking pieces
+
+		captureList[n] = -captureList[n-1] + lastAtkVal
+		n++
+
+		// save the value of tha capturing piece to be used later
+		lastAtkVal = abs(pieceVal[pt2pc(pt, stm)])
+		stm = stm.opp() // next side to move
+
+		if pt == King && (attackingBB&b.pieceBB[King]&b.wbBB[stm]) != 0 {
+			// if king capture and 'they' are atting we have to stop
+			captureList[n] = pieceVal[wK]
+			n++
+			break
+		}
+
+		if attackingBB&b.wbBB[stm] == 0 { // if no more attackers
+			break
+		}
+
+	}
+
+	// find the optimal capture sequence and 'our' material value will be on top
+	for n--; n != 0; n-- {
+		captureList[n-1] = min(-captureList[n], captureList[n-1])
+	}
+
+	return captureList[0]
 }
 
 func genAndSort(b *boardStruct, ml *moveList) {

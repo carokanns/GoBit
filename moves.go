@@ -15,14 +15,14 @@ const (
 
 	frMask     = 0x00000003f                //00 0000 0000  0000 0000  0000 0000  0011 1111
 	toMask     = 0x000000fd0                //00 0000 0000  0000 0000  0000 1111  1100 0000
-	p12Mask    = 0x00000f000                //00 0000 0000  0000 0000  1111 0000  0000 0000
+	pcMask     = 0x00000f000                //00 0000 0000  0000 0000  1111 0000  0000 0000
 	cpMask     = 0x0000f0000                //00 0000 0000  0000 1111  0000 0000  0000 0000
 	prMask     = 0x000f00000                //00 0000 0000  1111 0000  0000 0000  0000 0000
 	epMask     = 0x03f000000                //00 0011 1111  0000 0000  0000 0000  0000 0000
 	castlMask  = 0x3c0000000                //11 1100 0000  0000 0000  0000 0000  0000 0000
 	evalMask   = uint64(0xffff000000000000) // The 16 first bits in uint64
 	toShift    = 6
-	p12Shift   = 12 //6+6
+	pcShift    = 12 //6+6
 	cpShift    = 16 //6+6+4
 	prShift    = 20 //6+6+4+4
 	epShift    = 24 //6+6+4+4+4
@@ -31,7 +31,7 @@ const (
 	noMove     = move(0)
 )
 
-var pieceRules [nP][]int // not pawns
+var pieceRules [nPt][]int // not pawns
 
 type move uint64
 
@@ -43,15 +43,15 @@ func (m move) String() string {
 func (m move) StringFull() string {
 	fr := sq2Fen[int(m.fr())]
 	to := sq2Fen[int(m.to())]
-	p := int2Fen(int(m.p12()))
-	cp := int2Fen(int(m.cp())) + " "
-	pr := int2Fen(int(m.pr()))
-	return trim(fmt.Sprintf("%v%v-%v%v%v", p, fr, cp[:1], to, pr))
+	pc := pc2Fen(int(m.pc()))
+	cp := pc2Fen(int(m.cp())) + " "
+	pr := pc2Fen(int(m.pr()))
+	return trim(fmt.Sprintf("%v%v-%v%v%v", pc, fr, cp[:1], to, pr))
 }
 
-func (m *move) packMove(fr, to, p12, cp, pr, epSq int, castl castlings) {
-	// 6 bits fr, 6 bits to, 4 bits p12, 4 bits cp, 4 bits prom, 4 bits ep, 4 bits castl = 32 bits
-	*m = move(fr | (to << toShift) | (p12 << p12Shift) |
+func (m *move) packMove(fr, to, pc, cp, pr, epSq int, castl castlings) {
+	// 6 bits fr, 6 bits to, 4 bits pc, 4 bits cp, 4 bits prom, 4 bits ep, 4 bits castl = 32 bits
+	*m = move(fr | (to << toShift) | (pc << pcShift) |
 		(cp << cpShift) | (pr << prShift) | (epSq << epShift) | int(castl<<castlShift))
 }
 func (m *move) packEval(score int) {
@@ -62,7 +62,7 @@ func (m *move) packEval(score int) {
 // compare two moves - only frSq and toSq
 func (m move) cmpFrTo(m2 move) bool {
 	// return (m & move(^evalMask)) == (m2 & move(^evalMask))
-	 return m.fr() == m2.fr() && m.to() == m2.to()
+	return m.fr() == m2.fr() && m.to() == m2.to()
 }
 
 func (m move) eval() int {
@@ -75,8 +75,8 @@ func (m move) to() int {
 	return int(m&toMask) >> toShift
 }
 
-func (m move) p12() int {
-	return int(m&p12Mask) >> p12Shift
+func (m move) pc() int {
+	return int(m&pcMask) >> pcShift
 }
 func (m move) cp() int {
 	return int(m&cpMask) >> cpShift

@@ -12,9 +12,10 @@
     "diverese": true,
     "pm.txt": true,
     "GoBit.exe~": true,
-    ".gitignore": true,
     "london.txt": true,
-    "engine-interface.txt": true
+    "engine-interface.txt": true,
+    "testresults.txt": true,
+    ".gitignore": true
   },
   "cSpell.words": [
     "Pval",

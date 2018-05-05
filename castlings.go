@@ -17,7 +17,7 @@ const (
 type castlOptions struct {
 	short                                uint // flag
 	long                                 uint // flag
-	rook                                 int  // rook p12 (wR/bR)
+	rook                                 int  // rook pc (wR/bR)
 	kingPos                              int  // king pos
 	rookSh                               uint // rook pos short
 	rookL                                uint // rook pos long

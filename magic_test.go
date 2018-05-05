@@ -5,7 +5,7 @@ import (
 )
 
 func Test_sMagic_atks(t *testing.T) {
-	initFenSq2Int()
+	initFen2Sq()
 	initMagic()
 	handleNewgame()
 	tests := []struct {

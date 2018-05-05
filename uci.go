@@ -67,11 +67,11 @@ func uci(input chan string) {
 		case "see":
 			fr, to := empty, empty
 			if len(words[1]) == 2 && len(words[2]) == 2 {
-				fr = fenSq2Int[words[1]]
-				to = fenSq2Int[words[2]]
+				fr = fen2Sq[words[1]]
+				to = fen2Sq[words[2]]
 			} else if len(words[1]) == 4 {
-				fr = fenSq2Int[words[1][0:2]]
-				to = fenSq2Int[words[1][2:]]
+				fr = fen2Sq[words[1][0:2]]
+				to = fen2Sq[words[1][2:]]
 			} else {
 				fmt.Println("error in fr/to")
 				continue
