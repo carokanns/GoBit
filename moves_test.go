@@ -62,16 +62,15 @@ func Test_move_cmp(t *testing.T) {
 			m3.packMove(tt.args.fr+1, tt.args.to+1, tt.args.pc, tt.args.cp, tt.args.pr, tt.args.epSq, tt.args.castl)
 			m3.packEval(tt.args.eval2)
 
-			if got := m1.cmpFrTo(m2); got != tt.args.want {
+			if got := m1.cmp(m2); got != tt.args.want {
 				t.Errorf("move.cmp() = %v, want %v", got, tt.args.want)
 			}
-			if got := m1.cmpFrTo(m3); got == tt.args.want {
+			if got := m1.cmp(m3); got == tt.args.want {
 				t.Errorf("move.cmp() = %v, want %v", got, !tt.args.want)
 			}
 		})
 	}
 }
-
 func Test_move_packMove(t *testing.T) {
 	type args struct {
 		fr    int
@@ -87,7 +86,9 @@ func Test_move_packMove(t *testing.T) {
 		args args
 	}{
 		{"", args{A1, A2, wR, empty, empty, 0, castlings(shortW | shortB)}},
+		{"", args{A1, A2, wR, empty, empty, 0, castlings(shortW|longW | shortB |longB)}},
 		{"", args{D4, D5, bR, wQ, empty, E3, castlings(shortW | longB)}},
+		{"", args{D4, D5, bR, wQ, empty, E3, castlings(shortW|longW | shortB |longB)}},
 	}
 	var m move
 	for _, tt := range tests {
@@ -108,8 +109,8 @@ func Test_move_packMove(t *testing.T) {
 			if m.pr() != tt.args.pr {
 				t.Errorf("%v: want r=%v. Got %v ", tt.name, tt.args.pr, m.pr())
 			}
-			if m.ep() != tt.args.epSq {
-				t.Errorf("%v: want epr=%v. Got %v ", tt.name, tt.args.epSq, m.ep())
+			if m.ep(pcColor(tt.args.pc)) != tt.args.epSq {
+				t.Errorf("%v: want epr=%v. Got %v ", tt.name, tt.args.epSq, m.ep(pcColor(tt.args.pc)))
 			}
 			if m.castl() != castlings(tt.args.castl) {
 				t.Errorf("%v: want castl=%v. Got %v ", tt.name, tt.args.castl, m.castl())
@@ -159,14 +160,15 @@ func Test_move_packEval(t *testing.T) {
 		name string
 		args args
 	}{
-		{"", args{A1, A2, wR, empty, empty, 0, castlings(shortW | shortB), -1111}},
-		{"", args{D4, D5, bR, wQ, empty, E3, castlings(shortW | longB), 222}},
-		{"", args{E2, E4, wP, empty, empty, 0, castlings(shortW | shortB), -129}},
-		{"", args{G1, F3, wN, empty, empty, E6, castlings(shortW | longB), 169}},
+		{"no ep", args{A1, A2, wR, empty, empty, 0, castlings(shortW | shortB), -1111}},
+		{"ep E3", args{D4, D5, bR, wQ, empty, E3, castlings(shortW | longB), 222}},
+		{"no ep again", args{E2, E4, wP, empty, empty, 0, castlings(shortW | shortB), -129}},
+		{"ep E6", args{G1, F3, wN, empty, empty, E6, castlings(shortW | longB), 169}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mv := noMove
+			board.stm = pcColor(tt.args.pc)
 			mv.packMove(tt.args.fr, tt.args.to, tt.args.pc, tt.args.cp, tt.args.pr, tt.args.epSq, tt.args.castl)
 			mv.packEval(-2999) // set garbage in eval
 			mv.packEval(tt.args.score)
@@ -185,8 +187,8 @@ func Test_move_packEval(t *testing.T) {
 			if mv.pr() != tt.args.pr {
 				t.Errorf("%v: want pr=%v. Got %v ", tt.name, tt.args.pr, mv.pr())
 			}
-			if mv.ep() != tt.args.epSq {
-				t.Errorf("%v: want ep=%v. Got %v ", tt.name, tt.args.epSq, mv.ep())
+			if mv.ep(pcColor(tt.args.pc)) != tt.args.epSq {
+				t.Errorf("%v: want ep=%v. Got %v ", tt.name, tt.args.epSq, mv.ep(board.stm))
 			}
 			if mv.castl() != castlings(tt.args.castl) {
 				t.Errorf("%v: want castl=%v. Got %v ", tt.name, tt.args.castl, mv.castl())

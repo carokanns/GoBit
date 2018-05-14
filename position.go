@@ -146,6 +146,7 @@ func initAtksKings() {
 }
 
 type boardStruct struct {
+	key     uint64
 	sq      [64]int
 	wbBB    [2]bitBoard
 	pieceBB [nPt]bitBoard
@@ -190,6 +191,7 @@ func (b *boardStruct) clear() {
 	for ix := 0; ix < nPt; ix++ {
 		b.pieceBB[ix] = 0
 	}
+	b.key = 0
 }
 
 // make a move
@@ -262,6 +264,7 @@ func (b *boardStruct) move(mv move) bool {
 		b.setSq(pc, to)
 	}
 
+	b.key = ^b.key
 	b.stm = b.stm ^ 0x1
 	if b.isAttacked(b.King[b.stm^0x1], b.stm) {
 		b.unmove(mv)
@@ -272,7 +275,7 @@ func (b *boardStruct) move(mv move) bool {
 }
 
 func (b *boardStruct) unmove(mv move) {
-	b.ep = mv.ep()
+	b.ep = mv.ep(b.stm)
 	b.castlings = mv.castl()
 	pc := int(mv.pc())
 	fr := int(mv.fr())
@@ -301,6 +304,7 @@ func (b *boardStruct) unmove(mv move) {
 			b.setSq(empty, fr+1)
 		}
 	}
+	b.key = ^b.key
 	b.stm = b.stm ^ 0x1
 }
 
@@ -313,6 +317,7 @@ func (b *boardStruct) setSq(pc, sq int) {
 		b.count[cp]--
 		b.wbBB[sd^0x1].clr(sq)
 		b.pieceBB[pc2pt(cp)].clr(sq)
+		b.key ^= pcSqKeyx(cp, sq)
 	}
 	b.sq[sq] = pc
 
@@ -324,6 +329,8 @@ func (b *boardStruct) setSq(pc, sq int) {
 		}
 		return
 	}
+
+	b.key ^= pcSqKeyx(pc, sq)
 
 	b.count[pc]++
 
@@ -510,21 +517,25 @@ func (b *boardStruct) genKingMoves(ml *moveList, targetBB bitBoard) {
 
 	// castlings
 	if b.King[sd] == castl[sd].kingPos { // NOTE: Maybe not needed. We should know that the king is there if the flags are ok
-		// short castling
-		if b.sq[castl[sd].rookSh] == castl[sd].rook && // NOTE: Maybe not needed. We should know that the rook is there if the flags are ok
-			(castl[sd].betweenSh&b.allBB()) == 0 {
-			if b.isShortOk(sd) {
-				mv.packMove(b.King[sd], b.King[sd]+2, b.sq[b.King[sd]], empty, empty, b.ep, b.castlings)
-				ml.add(mv)
+		if targetBB.test(b.King[sd] + 2) {
+			// short castling
+			if b.sq[castl[sd].rookSh] == castl[sd].rook && // NOTE: Maybe not needed. We should know that the rook is there if the flags are ok
+				(castl[sd].betweenSh&b.allBB()) == 0 {
+				if b.isShortOk(sd) {
+					mv.packMove(b.King[sd], b.King[sd]+2, b.sq[b.King[sd]], empty, empty, b.ep, b.castlings)
+					ml.add(mv)
+				}
 			}
 		}
 
-		// long castling
-		if b.sq[castl[sd].rookL] == castl[sd].rook && // NOTE: Maybe not needed. We should know that the rook is there if the flags are ok
-			(castl[sd].betweenL&b.allBB()) == 0 {
-			if b.isLongOk(sd) {
-				mv.packMove(b.King[sd], b.King[sd]-2, b.sq[b.King[sd]], empty, empty, b.ep, b.castlings)
-				ml.add(mv)
+		if targetBB.test(b.King[sd] - 2) {
+			// long castling
+			if b.sq[castl[sd].rookL] == castl[sd].rook && // NOTE: Maybe not needed. We should know that the rook is there if the flags are ok
+				(castl[sd].betweenL&b.allBB()) == 0 {
+				if b.isLongOk(sd) {
+					mv.packMove(b.King[sd], b.King[sd]-2, b.sq[b.King[sd]], empty, empty, b.ep, b.castlings)
+					ml.add(mv)
+				}
 			}
 		}
 	}
@@ -1102,6 +1113,10 @@ func (b *boardStruct) printAllLegals() {
 }
 
 func (b *boardStruct) Print() {
+	for _, pc := range b.sq {
+		fmt.Print(pc, ",")
+	}
+	fmt.Println()
 	txtStm := "BLACK"
 	if b.stm == WHITE {
 		txtStm = "WHITE"
@@ -1110,8 +1125,10 @@ func (b *boardStruct) Print() {
 	if b.ep != 0 {
 		txtEp = sq2Fen[b.ep]
 	}
-
-	fmt.Printf("%v to move; ep: %v  castling:%v\n", txtStm, txtEp, b.castlings.String())
+	key, fullKey := b.key, b.fullKey()
+	index := fullKey & uint64(transx.mask)
+	lock := transx.lock(fullKey)
+	fmt.Printf("%v to move; ep: %v  castling:%v fullKey=%x key=%x index=%x lock=%x \n", txtStm, txtEp, b.castlings.String(), fullKey, key, index, lock)
 
 	fmt.Println("  +------+------+------+------+------+------+------+------+")
 	for lines := 8; lines > 0; lines-- {

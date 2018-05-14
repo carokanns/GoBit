@@ -5,6 +5,41 @@ import (
 	"testing"
 )
 
+/////////////////////////////// BENCHMARKS ////////////////////////////////
+
+func Benchmark_genRookMoves(b *testing.B) {
+	// run the genRook function b.N times
+	var ml moveList
+	initFen2Sq()
+	initMagic()
+	initAtksKings()
+	initAtksKnights()
+
+	handleNewgame()
+	handlePosition("position startpos moves d2d4 d7d5 c1f4 g8f6 e2e3 e7e6 b1d2 c7c5 c2c3 b8c6 g1f3 f8e7 f1d3 c8d7")
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		board.genRookMoves(&ml, ^board.wbBB[board.stm])
+	}
+}
+
+func Benchmark_genSimpleRookMoves(b *testing.B) {
+	// run the genRook function b.N times
+	var ml = moveList{}
+	initFen2Sq()
+	initMagic()
+	initAtksKings()
+	initAtksKnights()
+
+	handleNewgame()
+	handlePosition("position startpos moves d2d4 d7d5 c1f4 g8f6 e2e3 e7e6 b1d2 c7c5 c2c3 b8c6 g1f3 f8e7 f1d3 c8d7")
+	b.ResetTimer()
+	for n := 0; n < b.N; n++ {
+		board.genSimpleRookMoves(&ml, board.stm)
+	}
+}
+
+//////////////////////////////////////// TESTS ///////////////////////////////////////
 func Test_pc2Fen(t *testing.T) {
 
 	tests := []struct {
@@ -540,44 +575,12 @@ func Test_boardStruct_genPawnCapt(t *testing.T) {
 	}
 }
 
-func Benchmark_genRookMoves(b *testing.B) {
-	// run the genRook function b.N times
-	var ml moveList
-	initFen2Sq()
-	initMagic()
-	initAtksKings()
-	initAtksKnights()
-
-	handleNewgame()
-	handlePosition("position startpos moves d2d4 d7d5 c1f4 g8f6 e2e3 e7e6 b1d2 c7c5 c2c3 b8c6 g1f3 f8e7 f1d3 c8d7")
-	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
-		board.genRookMoves(&ml, ^board.wbBB[board.stm])
-	}
-}
-
-func Benchmark_genSimpleRookMoves(b *testing.B) {
-	// run the genRook function b.N times
-	var ml = moveList{}
-	initFen2Sq()
-	initMagic()
-	initAtksKings()
-	initAtksKnights()
-
-	handleNewgame()
-	handlePosition("position startpos moves d2d4 d7d5 c1f4 g8f6 e2e3 e7e6 b1d2 c7c5 c2c3 b8c6 g1f3 f8e7 f1d3 c8d7")
-	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
-		board.genSimpleRookMoves(&ml, board.stm)
-	}
-}
-
-func findMoves(mlf *moveList, mvs []string) (bool, move) {
+func findMoves(ml *moveList, stringMvs []string) (bool, move) {
 	found := false
-	var mv1 move
-	for _, mvStr := range mvs {
-		fr := fen2Sq[mvStr[:2]]
-		to := fen2Sq[mvStr[2:4]]
+	var mv move
+	for _, strMv := range stringMvs {
+		fr := fen2Sq[strMv[:2]]
+		to := fen2Sq[strMv[2:4]]
 		cp := board.sq[to]
 		if cp == empty && (board.sq[fr] == wP || board.sq[fr] == bP) && to == board.ep { // ep
 			cp = wP
@@ -586,20 +589,20 @@ func findMoves(mlf *moveList, mvs []string) (bool, move) {
 			}
 		}
 		pr := empty
-		if len(mvStr) >= 5 {
-			pr = fen2pc(mvStr[4:5])
+		if len(strMv) >= 5 {
+			pr = fen2pc(strMv[4:5])
 		}
-		mv1 = noMove
-		mv1.packMove(fr, to, board.sq[fr], cp, pr, board.ep, board.castlings)
+		mv = noMove
+		mv.packMove(fr, to, board.sq[fr], cp, pr, board.ep, board.castlings)
 		found = false
-		for _, mv2 := range *mlf {
-			if mv1 == mv2 {
+		for _, mv2 := range *ml {
+			if mv == mv2 {
 				found = true
 				break
 			}
 		}
 		if found == false {
-			return false, mv1
+			return false, mv
 		}
 	}
 	return true, 0

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
@@ -28,7 +29,7 @@ func Test_Uci(t *testing.T) {
 	}{
 		{"uci", "uci", []string{"id name GoBit", "id author Carokanns", "option name Hash type spin default", "option name Threads type spin default", "uciok"}},
 		{"isready", "isready", []string{"readyok"}},
-		{"set Hash", "setoption name Hash value 256", []string{"info string setoption not implemented"}},
+		//{"set Hash", "setoption name Hash value 256", []string{"info string setoption not implemented"}},
 		{"skit", "skit", []string{"info string unknown cmd skit"}},
 		{"pos skit", "position skit", []string{"info string Error\"skit\" must be \"fen\" or \"startpos\""}},
 		{"position no cmd", "position", []string{"info string Error[] wrong length=1"}},
@@ -80,9 +81,9 @@ func Test_handleStop(t *testing.T) {
 		infinite bool
 		want     bool
 	}{
-		{"stop", "bestmove a1h8", true, false},
-		{"stop", "", true, false},
-		{"stop", "", false, false},
+		{"stop1", "bestmove a1h8", true, false},
+		{"stop2", "", true, false},
+		{"stop3", "", false, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -150,4 +151,20 @@ func Test_handleNewgame(t *testing.T) {
 			t.Errorf("%v: 50 move rule should be %v but we got %v", "ucinewgame", 0, board.rule50)
 		}
 	})
+}
+
+func Test_handleSetOption(t *testing.T) {
+	tests := []struct {
+		name string
+		cmd string
+		wantEntries int64
+	}{
+	// Setoption Hash is tested in Test_transx_new(...) in position_test.go
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			words := strings.Split(tt.cmd," ")
+			handleSetOption(words)
+		})
+	}
 }

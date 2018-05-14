@@ -64,6 +64,13 @@ func uci(input chan string) {
 			board.printAllLegals()
 		case "eval":
 			fmt.Println("eval =", evaluate(&board))
+		case "pos":
+			handleMyPositions(words)
+		case "key":
+			fmt.Printf("key = %x, fullkey=%x\n", board.key, board.fullKey())
+			index := board.fullKey() & uint64(transx.mask)
+			lock := transx.lock(board.fullKey())
+			fmt.Printf("index = %x, lock=%x\n", index, lock)
 		case "see":
 			fr, to := empty, empty
 			if len(words[1]) == 2 && len(words[2]) == 2 {
@@ -77,9 +84,9 @@ func uci(input chan string) {
 				continue
 			}
 
-			fmt.Println("see = ", seex(fr, to, &board))
+			fmt.Println("see = ", see(fr, to, &board))
 		case "qs":
-			fmt.Println("qs =", qsx(maxEval, &board))
+			fmt.Println("qs =", qs(maxEval, &board))
 
 		default:
 			tell("info string unknown cmd ", cmd)
@@ -166,10 +173,29 @@ func handleBm(bm string) {
 	tell(bm)
 }
 
-// not implemented uci commands
 func handleSetOption(words []string) {
 	// setoption name Hash value 256
-	tell("info string setoption not implemented")
+	if len(words) < 5 {
+		tell("info string Don't have this option " + strings.Join(words[:], " "))
+	}
+	if low(trim(words[1])) != "name" {
+		tell("info string 'name' is missing in this option " + strings.Join(words[:], " "))
+	}
+	switch low(trim(words[2])) {
+	case "hash":
+		if trim(low(words[3])) != "value" {
+			tell("info string 'value' is missing in this option " + strings.Join(words[:], " "))
+		}
+		if val, err := strconv.Atoi(trim(words[4])); err == nil {
+			if err = transx.new(val); err != nil {
+				tell(err.Error())
+			}
+		} else {
+			tell("info string The Hash value is not numeric " + strings.Join(words[:], " "))
+		}
+	default:
+		tell("info string Don't have this option " + strings.Join(words[:], " "))
+	}
 }
 
 // go  searchmoves <move1-moveii>/ponder/wtime <ms>/ btime <ms>/winc <ms>/binc <ms>/movestogo <x>/
@@ -195,9 +221,13 @@ func handleGo(toEng chan bool, words []string) {
 		case "movestogo":
 			tell("info string go movestogo not implemented")
 		case "depth":
-			d, err := strconv.Atoi(words[2])
-			if err != nil {
-				tell("info string ", words[2], " not numeric")
+			d := -1
+			err := error(nil)
+			if len(words) >= 3 {
+				d, err = strconv.Atoi(words[2])
+			}
+			if d < 0 || err != nil {
+				tell("info string depth not numeric")
 				return
 			}
 			limits.setDepth(d)
@@ -229,6 +259,23 @@ func handleGo(toEng chan bool, words []string) {
 	}
 }
 
+func handleMyPositions(words []string){
+	if len(words) <2{
+		tell ("info string not correct pos command "+ strings.Join(words[:], " "))
+	}
+
+	words[1] = trim(low(words[1]))
+	handleSetOption(strings.Split("setoption name hash value 256"," "))
+	switch words[1]{
+	case "london": handlePosition("position startpos moves d2d4 d7d5 c1f4 g8f6 e2e3 c7c5 b1d2 b8c6 c2c3 e7e6 f1d3 f8d6")
+	case "phil": handlePosition("position startpos moves e2e4 d7d6 d2d4 e7e5 d4e5 d6e5 d1d8 e8d8 g1f3 f7f6 b1c3 c7c6 f1c4")
+	case "english": handlePosition("position startpos moves c2c4 e7e5 g2g3 b8c6 f1g2 g7g6 b1c3 f8g7 e2e4 d7d6 g1e2 g8f6")
+	default: tell ("info string not correct pos command "+words[1]+" doesn't exist. " + strings.Join(words[:], " "))
+	}
+}
+
+
+// not implemented uci commands
 func handlePonderhit() {
 	tell("info string ponderhit not implemented")
 }

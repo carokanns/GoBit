@@ -13,20 +13,20 @@ const (
 	SW = -NE
 	SE = -NW
 
-	frMask     = 0x00000003f                //00 0000 0000  0000 0000  0000 0000  0011 1111
-	toMask     = 0x000000fd0                //00 0000 0000  0000 0000  0000 1111  1100 0000
-	pcMask     = 0x00000f000                //00 0000 0000  0000 0000  1111 0000  0000 0000
-	cpMask     = 0x0000f0000                //00 0000 0000  0000 1111  0000 0000  0000 0000
-	prMask     = 0x000f00000                //00 0000 0000  1111 0000  0000 0000  0000 0000
-	epMask     = 0x03f000000                //00 0011 1111  0000 0000  0000 0000  0000 0000
-	castlMask  = 0x3c0000000                //11 1100 0000  0000 0000  0000 0000  0000 0000
+	frMask     = 0x0000003f                 //0000 0000  0000 0000  0000 0000  0011 1111
+	toMask     = 0x00000fd0                 //0000 0000  0000 0000  0000 1111  1100 0000
+	pcMask     = 0x0000f000                 //0000 0000  0000 0000  1111 0000  0000 0000
+	cpMask     = 0x000f0000                 //0000 0000  0000 1111  0000 0000  0000 0000
+	prMask     = 0x00f00000                 //0000 0000  1111 0000  0000 0000  0000 0000
+	epMask     = 0x0f000000                 //0000 1111  0000 0000  0000 0000  0000 0000
+	castlMask  = 0xf0000000                 //1111 0000  0000 0000  0000 0000  0000 0000
 	evalMask   = uint64(0xffff000000000000) // The 16 first bits in uint64
 	toShift    = 6
 	pcShift    = 12 //6+6
 	cpShift    = 16 //6+6+4
 	prShift    = 20 //6+6+4+4
 	epShift    = 24 //6+6+4+4+4
-	castlShift = 30 //6+6+4+4+4+6
+	castlShift = 28 //6+6+4+4+4+4
 	evalShift  = 64 - 16
 	noMove     = move(0)
 )
@@ -51,8 +51,13 @@ func (m move) StringFull() string {
 
 func (m *move) packMove(fr, to, pc, cp, pr, epSq int, castl castlings) {
 	// 6 bits fr, 6 bits to, 4 bits pc, 4 bits cp, 4 bits prom, 4 bits ep, 4 bits castl = 32 bits
+	if epSq == empty{panic("wtf ep")}
+	epFile := 0
+	if epSq != 0 {
+		epFile = epSq%8 + 1
+	}
 	*m = move(fr | (to << toShift) | (pc << pcShift) |
-		(cp << cpShift) | (pr << prShift) | (epSq << epShift) | int(castl<<castlShift))
+		(cp << cpShift) | (pr << prShift) | (epFile << epShift) | int(castl<<castlShift))
 }
 func (m *move) packEval(score int) {
 	(*m) &= move(^evalMask) //clear eval
@@ -63,6 +68,11 @@ func (m *move) packEval(score int) {
 func (m move) cmpFrTo(m2 move) bool {
 	// return (m & move(^evalMask)) == (m2 & move(^evalMask))
 	return m.fr() == m2.fr() && m.to() == m2.to()
+}
+
+// compare two moves
+func (m move) cmp(m2 move) bool {
+	return (m & move(^evalMask)) == (m2 & move(^evalMask))
 }
 
 func (m move) eval() int {
@@ -84,11 +94,31 @@ func (m move) cp() int {
 func (m move) pr() int {
 	return int(m&prMask) >> prShift
 }
-func (m move) ep() int {
-	return int(m&epMask) >> epShift
+
+func (m move) ep(sd color) int {
+	// sd is the side that can capture
+	file := int(m&epMask) >> epShift
+	if file == 0 {
+		return 0 // no ep
+	}
+
+	// there is an ep sq
+	rank := 5
+	if sd == BLACK {
+		rank = 2
+	}
+
+	return rank*8 + file - 1
+
 }
+
 func (m move) castl() castlings {
 	return castlings(m&castlMask) >> castlShift
+}
+
+//move without eval
+func (m move) onlyMv() move {
+	return m & move(^evalMask)
 }
 
 type moveList []move

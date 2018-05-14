@@ -14,7 +14,7 @@ const (
 
 var cntNodes uint64
 
-//TODO search limits: counting nodes and testing for limit.nodes
+//TODO search limits: count nodes and test for limit.nodes
 //TODO search limits: limit.depth
 
 //TODO search limits: time per game w/wo increments
@@ -89,7 +89,7 @@ func (pv *pvList) String() string {
 func engine() (toEngine chan bool, frEngine chan string) {
 	frEngine = make(chan string)
 	toEngine = make(chan bool)
-	go root(toEngine, frEngine)
+	go rootx(toEngine, frEngine)
 
 	return
 }
@@ -214,11 +214,11 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 	return bs
 }
 
-func initQS(ml *moveList, b *boardStruct){
+func initQS(ml *moveList, b *boardStruct) {
 	ml.clear()
 	b.genAllCaptures(ml)
 }
-func qs(beta int, b *boardStruct) int{
+func qs(beta int, b *boardStruct) int {
 	ev := signEval(b.stm, evaluate(b))
 	if ev >= beta {
 		// we are good. No need to try captures
@@ -226,23 +226,22 @@ func qs(beta int, b *boardStruct) int{
 	}
 	bs := ev
 
-	qsList := make(moveList,0,60)
-	initQS(&qsList,b) // create attacks
-
-	done:=bitBoard(0)
+	qsList := make(moveList, 0, 60)
+	initQS(&qsList, b) // create attacks
+	done := bitBoard(0)
 
 	// move loop
-	for _,mv := range qsList{
-		fr:=mv.fr()
-		to:=mv.to()
+	for _, mv := range qsList {
+		fr := mv.fr()
+		to := mv.to()
 
-		// This works because we pick lower value pieces first 
-		if done.test(to) {// Don't do the same to-sw again
+		// This works because we pick lower value pieces first
+		if done.test(to) { // Don't do the same to-sw again
 			continue
 		}
 		done.set(to)
 
-		see := see(fr,to,b)
+		see := see(fr, to, b)
 
 		if see < 0 {
 			continue // equal captures not interesting
@@ -252,9 +251,9 @@ func qs(beta int, b *boardStruct) int{
 			see = pieceVal[wQ] - pieceVal[wP]
 		}
 
-		sc := ev+see
+		sc := ev + see
 		if sc > bs {
-			bs = sc 
+			bs = sc
 			if sc >= beta {
 				return sc
 			}
@@ -263,6 +262,7 @@ func qs(beta int, b *boardStruct) int{
 
 	return bs
 }
+
 // see (Static Echange Evaluation)
 // Start with the capture fr-to and find out all the other captures to to-sq
 func see(fr, to int, b *boardStruct) int {
@@ -275,12 +275,13 @@ func see(fr, to int, b *boardStruct) int {
 	// All the attackers to the to-sq, but first remove the moving piece and use X-ray to the to-sq
 	occ := b.allBB()
 	occ.clr(fr)
-	attackingBB := mRookTab[to].atks(occ)&(b.pieceBB[Rook]|b.pieceBB[Queen]) |
-		mBishopTab[to].atks(occ)&(b.pieceBB[Bishop]|b.pieceBB[Queen]) |
-		(atksKnights[to] & b.pieceBB[Knight]) |
-		(atksKings[to] & b.pieceBB[King]) |
-		(b.wPawnAtksFr(to) & b.pieceBB[Pawn] & b.wbBB[BLACK]) |
-		(b.bPawnAtksFr(to) & b.pieceBB[Pawn] & b.wbBB[WHITE])
+	attackingBB :=
+		mRookTab[to].atks(occ)&(b.pieceBB[Rook]|b.pieceBB[Queen]) |
+			mBishopTab[to].atks(occ)&(b.pieceBB[Bishop]|b.pieceBB[Queen]) |
+			(atksKnights[to] & b.pieceBB[Knight]) |
+			(atksKings[to] & b.pieceBB[King]) |
+			(b.wPawnAtksFr(to) & b.pieceBB[Pawn] & b.wbBB[BLACK]) |
+			(b.bPawnAtksFr(to) & b.pieceBB[Pawn] & b.wbBB[WHITE])
 	attackingBB &= occ
 
 	if (attackingBB & b.wbBB[them]) == 0 { // 'they' have no attackers - good bye
@@ -290,16 +291,17 @@ func see(fr, to int, b *boardStruct) int {
 	// Now we continue to keep track of the material gain/loss for each capture
 	// Always remove the last attacker and use x-ray to find possible new attackers
 
-	lastAtkVal := abs(pieceVal[pc])  // save attacker piece value for later use
+	lastAtkVal := abs(pieceVal[pc]) // save attacker piece value for later use
 	var captureList [32]int
+	captureList[0] = abs(pieceVal[cp])
 	n := 1
 
 	stm := them // change side to move
-	var pt int
-	var BB bitBoard
 
 	for {
 		cnt++
+
+		var pt int
 		switch { // select the least valuable attacker
 		case (attackingBB & b.pieceBB[Pawn] & b.wbBB[stm]) != 0:
 			pt = Pawn
@@ -318,7 +320,7 @@ func see(fr, to int, b *boardStruct) int {
 		}
 
 		// now remove the pt above from the attackingBB and scan for new attackers by possible x-ray
-		BB = attackingBB & (attackingBB & b.pieceBB[pt] & b.wbBB[stm])
+		BB := attackingBB & (attackingBB & b.pieceBB[pt] & b.wbBB[stm])
 		occ ^= (BB & -BB) // turn off the rightmost bit from BB in occ
 
 		//  pick sliding attacks again (do it from to-sq)
@@ -330,10 +332,10 @@ func see(fr, to int, b *boardStruct) int {
 		n++
 
 		// save the value of tha capturing piece to be used later
-		lastAtkVal = abs(pieceVal[pt2pc(pt, stm)])
-		stm = stm.opp() // next side to move
+		lastAtkVal = pieceVal[pt2pc(pt, WHITE)] // using WHITE always gives positive integer
+		stm = stm.opp()                         // next side to move
 
-		if pt == King && (attackingBB&b.pieceBB[King]&b.wbBB[stm]) != 0 {
+		if pt == King && (attackingBB&b.wbBB[stm]) != 0 { //NOTE: just changed stm-color above
 			// if king capture and 'they' are atting we have to stop
 			captureList[n] = pieceVal[wK]
 			n++
@@ -414,7 +416,7 @@ func (k *killerStruct) clear() {
 
 // add killer 1 and 2 (Not inCheck, caaptures and promotions)
 func (k *killerStruct) add(mv move, ply int) {
-	if !k[ply].k1.cmpFrTo(mv) {
+	if !k[ply].k1.cmp(mv) {
 		k[ply].k2 = k[ply].k1
 		k[ply].k1 = mv
 	}
