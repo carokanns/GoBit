@@ -122,6 +122,9 @@ func (m move) onlyMv() move {
 }
 
 type moveList []move
+func (ml *moveList) new(size int) {
+	*ml = make(moveList, 0, size)
+}
 
 func (ml *moveList) clear() {
 	*ml = (*ml)[:0]

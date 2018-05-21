@@ -23,6 +23,7 @@ func Benchmark_root(b *testing.B) {
 		fakeRoot()
 	}
 }
+
 //  times
 /* only a/b nothing else
 Benchmark_root-4: 192.911s 	       1	192848735500 ns/op	13250269384 B/op	28233303 allocs/op
@@ -40,14 +41,14 @@ func fakeRoot() {
 	childPV.new()
 	b := &board
 	ml := make(moveList, 0, 60)
-	limits.startTime, limits.nextTime = time.Now(), time.Now()
+	limits.startTime, limits.lastTime = time.Now(), time.Now()
 	alpha, beta := minEval, maxEval
 	bm, bs := noMove, noScore
 	depth := limits.depth
 	cntNodes = 0
 	killers.clear()
 	ml.clear()
-	genAndSort(b, &ml)
+	genAndSort(0, b, &ml)
 
 	for ix := range ml {
 		mv := &ml[ix]
@@ -73,7 +74,6 @@ func fakeRoot() {
 	fmt.Printf("bestmove %v%v", sq2Fen[ml[0].fr()], sq2Fen[ml[0].to()])
 }
 
-
 //////////////////////////////////// TESTS ////////////////////////////////////////////////////////
 func Test_genAndSort(t *testing.T) {
 	tests := []struct {
@@ -88,7 +88,7 @@ func Test_genAndSort(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var ml moveList
-			genAndSort(&board, &ml)
+			genAndSort(0, &board, &ml)
 			if tt.want1Mv != trim(ml[0].String()) {
 				t.Errorf("%v: %#v should be best move. Got %#v", tt.name, tt.want1Mv, trim(ml[0].String()))
 			}
@@ -167,8 +167,8 @@ func Test_initQs(t *testing.T) {
 	}{
 		{"startpos", "position startpos", []args{}},
 		{"dxe5", "position startpos moves d2d4 e7e5", []args{{D4, E5}}},
-		{"QxQ delayed", "position fen r1b1kbnr/ppp2ppp/2n5/3pp1q1/3P2Q1/4PN2/PPP2PPP/RNB1KB1R w KQkq - 4 5", []args{{D4, E5}, {F3, E5}, {F3, G5}} },
-		{"ungarded pawn", "position fen rnbqkbnr/p1pppppp/8/1p6/2P5/8/PP1PPPPP/RNBQKBNR w KQkq - 0 2", []args{{C4, B5}, } },
+		{"QxQ delayed", "position fen r1b1kbnr/ppp2ppp/2n5/3pp1q1/3P2Q1/4PN2/PPP2PPP/RNB1KB1R w KQkq - 4 5", []args{{D4, E5}, {F3, E5}, {F3, G5}}},
+		{"ungarded pawn", "position fen rnbqkbnr/p1pppppp/8/1p6/2P5/8/PP1PPPPP/RNBQKBNR w KQkq - 0 2", []args{{C4, B5}}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -231,7 +231,7 @@ func Test_QS(t *testing.T) {
 		{"", "Pawn captures unguarded knight. Now under with queen and pawn", "position fen rnb1kbnr/ppp1pppp/8/3n4/2P5/8/PP1PPPPP/RNBQKBNR w KQkq - 0 1", pieceVal[wP] + pieceVal[wQ], 20},
 		{"", "White is Q-P down", "position fen rnbqkbnr/p1pppppp/8/1p6/2P5/8/PP1PPPPP/RNB1KBNR w KQkq - 0 2", -pieceVal[wQ] + pieceVal[wP], 20},
 		{"", "Black is Q-P down", "position fen rnb1kbnr/p1pppppp/8/1p6/2P5/8/PP1PPPPP/RNBQKBNR b KQkq - 0 2", -pieceVal[wQ] + pieceVal[wP], 20},
-		
+
 		// Promotions
 		{"", "Pawn promotes and no captures", "position fen 8/1k2P3/8/q7/8/8/6K1/8 w - - 0 1", 30, 30},
 		{"", "Pawn promotes with capture. B under. This special case is not working prperly", "position fen 3b1n2/1k2P3/8/q7/8/8/6K1/8 w - - 0 1", pieceVal[wP] - pieceVal[wB] - pieceVal[wN], 30},
@@ -270,4 +270,3 @@ func Test_QS(t *testing.T) {
 		})
 	}
 }
-

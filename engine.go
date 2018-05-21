@@ -25,7 +25,7 @@ type searchLimits struct {
 	moveTime  int // in milliseconds
 	infinite  bool
 	startTime time.Time
-	nextTime  time.Time
+	lastTime  time.Time
 
 	//////////////// current //////////
 	stop bool
@@ -89,62 +89,72 @@ func (pv *pvList) String() string {
 func engine() (toEngine chan bool, frEngine chan string) {
 	frEngine = make(chan string)
 	toEngine = make(chan bool)
-	go rootx(toEngine, frEngine)
+	go root(toEngine, frEngine)
 
 	return
 }
 
 //TODO root: Aspiration search
 func root(toEngine chan bool, frEngine chan string) {
-	var depth int
+	var depth, alpha, beta int
 	var pv pvList
 	var childPV pvList
+	var ml moveList
 	childPV.new()
 	pv.new()
+	ml.new(60)
 	b := &board
-	ml := make(moveList, 0, 60)
 	for _ = range toEngine {
-		limits.startTime, limits.nextTime = time.Now(), time.Now()
-		alpha, beta := minEval, maxEval
-
+		limits.startTime, limits.lastTime = time.Now(), time.Now()
 		cntNodes = 0
+
 		killers.clear()
 		ml.clear()
 		pv.clear()
-		genAndSort(b, &ml)
+
+		genAndSort(0, b, &ml)
 		bm := ml[0]
 		bs := noScore
 		depth = limits.depth
-		for depth = 1; depth <= limits.depth; depth++ {
-			bs = noScore
-			for ix := range ml {
-				mv := &ml[ix]
+		for depth = 1; depth <= limits.depth && !limits.stop; depth++ {
+			ml.sort()
+			bs = noScore // bm keeps the best from prev iteration in case of immediate stop before first is done in this iterastion
+			alpha, beta = minEval, maxEval
+			for ix, mv := range ml {
 				childPV.clear()
 
-				b.move(*mv)
+				b.move(mv)
 				tell("info depth ", strconv.Itoa(depth), " currmove ", mv.String(), " currmovenumber ", strconv.Itoa(ix+1))
+
 				score := -search(-beta, -alpha, depth-1, 1, &childPV, b)
-				b.unmove(*mv)
+				b.unmove(mv)
 				if limits.stop {
 					break
 				}
-				mv.packEval(score)
+				ml[ix].packEval(score)
 				if score > bs {
 					bs = score
-					pv.catenate(*mv, &childPV)
+					pv.catenate(mv, &childPV)
 
-					bm = *mv
+					bm = ml[ix]
 					alpha = score
 
 					t1 := time.Since(limits.startTime)
 					tell(fmt.Sprintf("info score cp %v depth %v nodes %v time %v pv ", bm.eval(), depth, cntNodes, int(t1.Seconds()*1000)), pv.String())
 				}
+
 			}
 			ml.sort()
 		}
-
+		//
+		// time, nps, ebf
 		t1 := time.Since(limits.startTime)
-		tell(fmt.Sprintf("info score cp %v depth %v nodes %v time %v pv ", bm.eval(), depth-1, cntNodes, int(t1.Seconds()*1000)), pv.String())
+		nps := float64(0)
+		if t1.Seconds() != 0 {
+			nps = float64(cntNodes) / t1.Seconds()
+		}
+
+		tell(fmt.Sprintf("info score cp %v depth %v nodes %v  time %v nps %v pv %v", bm.eval(), depth-1, cntNodes, int(t1.Seconds()*1000), uint(nps), pv.String()))
 		frEngine <- fmt.Sprintf("bestmove %v%v", sq2Fen[bm.fr()], sq2Fen[bm.to()])
 	}
 }
@@ -163,15 +173,22 @@ func root(toEngine chan bool, frEngine chan string) {
 func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 	cntNodes++
 	if depth <= 0 {
-		return signEval(b.stm, evaluate(b))
+		//return signEval(b.stm, evaluate(b))
+		return qs(beta, b)
 	}
 	pv.clear()
-	ml := make(moveList, 0, 60)
+
+	// trans retrieve here
+
+	var ml moveList
+	ml.new(60)
+
 	//genAndSort(b, &ml)
 	genInOrder(b, &ml, ply)
 
-	bm, bs := noMove, noScore
-	childPV := make(pvList, 0, maxPly)
+	bs := noScore
+	var childPV pvList
+	childPV.new() // TODO? make it smaller for each depth maxDepth-ply
 	for _, mv := range ml {
 		if !b.move(mv) {
 			continue
@@ -186,6 +203,10 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 		if score > bs {
 			bs = score
 			pv.catenate(mv, &childPV)
+			if score > alpha {
+				alpha = score
+				// trans.store here 		
+			}
 
 			if score >= beta { // beta cutoff
 				// add killer and update history
@@ -194,17 +215,11 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 				}
 				return score
 			}
-			if score > alpha {
-				bm = mv
-				_ = bm
-				alpha = score
-			}
-
 		}
-		if time.Since(limits.nextTime) >= time.Duration(time.Second) {
+		if time.Since(limits.lastTime) >= time.Duration(time.Second) {
 			t1 := time.Since(limits.startTime)
 			tell(fmt.Sprintf("info time %v nodes %v nps %v", int(t1.Seconds()*1000), cntNodes, cntNodes/uint64(t1.Seconds())))
-			limits.nextTime = time.Now()
+			limits.lastTime = time.Now()
 		}
 
 		if limits.stop {
@@ -243,12 +258,13 @@ func qs(beta int, b *boardStruct) int {
 
 		see := see(fr, to, b)
 
-		if see < 0 {
-			continue // equal captures not interesting
-		}
 		if see == 0 && mv.cp() == empty {
 			// must be a promotion that didn't captureand was not captured
 			see = pieceVal[wQ] - pieceVal[wP]
+		}
+
+		if see <= 0 {
+			continue // equal captures not interesting
 		}
 
 		sc := ev + see
@@ -356,7 +372,7 @@ func see(fr, to int, b *boardStruct) int {
 	return captureList[0]
 }
 
-func genAndSort(b *boardStruct, ml *moveList) {
+/* func genAndSort(b *boardStruct, ml *moveList) {
 	ml.clear()
 	b.genAllLegals(ml)
 	for ix, mv := range *ml {
@@ -365,6 +381,31 @@ func genAndSort(b *boardStruct, ml *moveList) {
 		b.unmove(mv)
 
 		v = signEval(b.stm, v)
+		(*ml)[ix].packEval(v)
+	}
+
+	ml.sort()
+} */
+func genAndSort(ply int, b *boardStruct, ml *moveList) {
+	if ply > maxPly {
+		panic("wtf maxply")
+	}
+
+	ml.clear()
+	b.genAllLegals(ml)
+
+	for ix, mv := range *ml {
+		b.move(mv)
+		v := evaluate(b)
+		b.unmove(mv)
+		if killers[ply].k1.cmp(mv) {
+			v += 1000
+		} else if killers[ply].k2.cmp(mv) {
+			v += 900
+		}
+
+		v = signEval(b.stm, v)
+
 		(*ml)[ix].packEval(v)
 	}
 

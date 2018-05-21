@@ -4,7 +4,6 @@
     "design.png": true,
     "**/*.exe": true,
     "**/*.png": true,
-    "README.md": true,
     "LICENSE": true,
     "uci_example.txt": true,
     "**/*.jpg": true,
@@ -13,7 +12,8 @@
     "pm.txt": true,
     "GoBit.exe~": true,
     "london.txt": true,
-    "temp_test.go": true
+    "engine-interface.txt": true,
+    "README.md": true
   },
   "cSpell.words": [
     "Pval",

@@ -317,7 +317,7 @@ func (b *boardStruct) setSq(pc, sq int) {
 		b.count[cp]--
 		b.wbBB[sd^0x1].clr(sq)
 		b.pieceBB[pc2pt(cp)].clr(sq)
-		b.key ^= pcSqKeyx(cp, sq)
+		b.key ^= pcSqKey(cp, sq)
 	}
 	b.sq[sq] = pc
 
@@ -330,7 +330,7 @@ func (b *boardStruct) setSq(pc, sq int) {
 		return
 	}
 
-	b.key ^= pcSqKeyx(pc, sq)
+	b.key ^= pcSqKey(pc, sq)
 
 	b.count[pc]++
 
@@ -926,7 +926,79 @@ func (b *boardStruct) genAllCaptures(ml *moveList) {
 	b.genQueenMoves(ml, oppBB)
 	b.genKingMoves(ml, oppBB)
 }
+// Create a list of captures from pawns to Kings (including promotions) - alternative
+func (b *boardStruct) genAllCapturesy(ml *moveList) {
+	us := b.stm
+	them := us.opp()
+	usBB := b.wbBB[us]
+	themBB := b.wbBB[them]
+	allBB := b.allBB()
+	var atkBB, frBB bitBoard
+	var mv move
 
+	// Pawns (including ep and promotions)
+	b.genPawnCapt(ml)
+
+	// Knights
+	pc := pt2pc(Knight, us)
+	frBB = b.pieceBB[Knight] & usBB
+	for fr := frBB.firstOne(); fr != 64; fr = frBB.firstOne() {
+		atkBB = atksKnights[fr] & themBB
+		for to := atkBB.firstOne(); to != 64; to = atkBB.firstOne() {
+			cp := b.sq[to]
+			mv.packMove(fr, to, pc, cp, empty, b.ep, b.castlings)
+			ml.add(mv)
+		}
+	}
+
+	// Bishops
+	pc = pt2pc(Bishop, us)
+	frBB = b.pieceBB[Bishop] & usBB
+	for fr := frBB.firstOne(); fr != 64; fr = frBB.firstOne() {
+		atkBB = mBishopTab[fr].atks(allBB) & themBB
+		for to := atkBB.firstOne(); to != 64; to = atkBB.firstOne() {
+			cp := b.sq[to]
+			mv.packMove(fr, to, pc, cp, empty, b.ep, b.castlings)
+			ml.add(mv)
+		}
+	}
+
+	// Rooks
+	pc = pt2pc(Rook, us)
+	frBB = b.pieceBB[Rook] & usBB
+	for fr := frBB.firstOne(); fr != 64; fr = frBB.firstOne() {
+		atkBB = mRookTab[fr].atks(allBB) & themBB
+		for to := atkBB.firstOne(); to != 64; to = atkBB.firstOne() {
+			cp := b.sq[to]
+			mv.packMove(fr, to, pc, cp, empty, b.ep, b.castlings)
+			ml.add(mv)
+		}
+	}
+
+	// Queens
+	pc = pt2pc(Queen, us)
+	frBB = b.pieceBB[Queen] & usBB
+	for fr := frBB.firstOne(); fr != 64; fr = frBB.firstOne() {
+		atkBB = mBishopTab[fr].atks(allBB) & themBB
+		atkBB |= mRookTab[fr].atks(allBB) & themBB
+		for to := atkBB.firstOne(); to != 64; to = atkBB.firstOne() {
+			cp := b.sq[to]
+			mv.packMove(fr, to, pc, cp, empty, b.ep, b.castlings)
+			ml.add(mv)
+		}
+	}
+
+	// King
+	pc = pt2pc(King, us)
+	fr := b.King[us]
+	atkBB = atksKings[fr] & themBB
+	for to := atkBB.firstOne(); to != 64; to = atkBB.firstOne() {
+		cp := b.sq[to]
+		mv.packMove(fr, to, pc, cp, empty, b.ep, b.castlings)
+		ml.add(mv)
+	}
+
+}
 func (b *boardStruct) genAllNonCaptures(ml *moveList) {
 	emptyBB := ^b.allBB()
 	b.genPawnCapt(ml)
@@ -1126,8 +1198,8 @@ func (b *boardStruct) Print() {
 		txtEp = sq2Fen[b.ep]
 	}
 	key, fullKey := b.key, b.fullKey()
-	index := fullKey & uint64(transx.mask)
-	lock := transx.lock(fullKey)
+	index := fullKey & uint64(trans.mask)
+	lock := trans.lock(fullKey)
 	fmt.Printf("%v to move; ep: %v  castling:%v fullKey=%x key=%x index=%x lock=%x \n", txtStm, txtEp, b.castlings.String(), fullKey, key, index, lock)
 
 	fmt.Println("  +------+------+------+------+------+------+------+------+")

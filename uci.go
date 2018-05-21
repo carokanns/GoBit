@@ -68,8 +68,8 @@ func uci(input chan string) {
 			handleMyPositions(words)
 		case "key":
 			fmt.Printf("key = %x, fullkey=%x\n", board.key, board.fullKey())
-			index := board.fullKey() & uint64(transx.mask)
-			lock := transx.lock(board.fullKey())
+			index := board.fullKey() & uint64(trans.mask)
+			lock := trans.lock(board.fullKey())
 			fmt.Printf("index = %x, lock=%x\n", index, lock)
 		case "see":
 			fr, to := empty, empty
@@ -187,7 +187,7 @@ func handleSetOption(words []string) {
 			tell("info string 'value' is missing in this option " + strings.Join(words[:], " "))
 		}
 		if val, err := strconv.Atoi(trim(words[4])); err == nil {
-			if err = transx.new(val); err != nil {
+			if err = trans.new(val); err != nil {
 				tell(err.Error())
 			}
 		} else {
