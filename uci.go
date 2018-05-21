@@ -39,6 +39,7 @@ func uci(input chan string) {
 		case "isready":
 			handleIsReady()
 		case "ucinewgame":
+			trans.clear()
 			handleNewgame()
 		case "position":
 			handlePosition(cmd)
@@ -99,7 +100,7 @@ func uci(input chan string) {
 func handleUci() {
 	tell("id name GoBit")
 	tell("id author Carokanns")
-
+	
 	tell("option name Hash type spin default 128 min 16 max 1024")
 	tell("option name Threads type spin default 1 min 1 max 16")
 	tell("uciok")
@@ -266,6 +267,7 @@ func handleMyPositions(words []string){
 
 	words[1] = trim(low(words[1]))
 	handleSetOption(strings.Split("setoption name hash value 256"," "))
+	trans.clear()
 	switch words[1]{
 	case "london": handlePosition("position startpos moves d2d4 d7d5 c1f4 g8f6 e2e3 c7c5 b1d2 b8c6 c2c3 e7e6 f1d3 f8d6")
 	case "phil": handlePosition("position startpos moves e2e4 d7d6 d2d4 e7e5 d4e5 d6e5 d1d8 e8d8 g1f3 f7f6 b1c3 c7c6 f1c4")

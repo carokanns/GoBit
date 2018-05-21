@@ -1,5 +1,9 @@
 package main
 
+import (
+	"strings"
+)
+
 func main() {
 	tell("info string Starting GoBit")
 
@@ -17,4 +21,6 @@ func init() {
 	initCastlings()
 	pcSqInit()
 	board.newGame()
+	handleSetOption(strings.Split("setoption name hash value 32", " "))
+
 }

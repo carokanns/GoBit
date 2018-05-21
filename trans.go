@@ -122,7 +122,7 @@ func (t *transpStruct) new(mB int) error {
 	t.cntUsed = 0
 
 	t.tab = make([]ttEntry, t.entries, t.entries)
-
+	t.clear()
 	tell(fmt.Sprintf("info string allocated %v MB to %v entries", len(t.tab)*entrySize/(1024*1024), t.entries))
 	return nil
 }
@@ -313,9 +313,9 @@ func isMateScore(sc int) bool {
 // in order to mix up different depths
 func removeMatePly(sc, ply int) int {
 	if sc < minEval+maxPly {
-		return sc - ply
+		return -mateEval
 	} else if sc > maxEval-maxPly {
-		return sc + ply
+		return mateEval
 	} else {
 		return sc
 	}
@@ -324,9 +324,9 @@ func removeMatePly(sc, ply int) int {
 // addMatePly adjusts mate value with ply if mate score
 func addMatePly(sc, ply int) int {
 	if sc < minEval+maxPly {
-		return sc + ply
-	} else if sc > maxEval+maxPly {
-		return sc - ply
+		return mateEval - ply
+	} else if sc > maxEval-maxPly {
+		return -mateEval+ply
 	}
 	return sc
 }
