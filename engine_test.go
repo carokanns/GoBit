@@ -270,3 +270,142 @@ func Test_QS(t *testing.T) {
 		})
 	}
 }
+
+func Test_nextNormal(t *testing.T) {
+	tests := []struct {
+		name              string
+		pos               string
+		transMove, k1, k2 string
+		goodCapt          []string
+		validGoodC        int
+		badCapt           []string
+		validBadC         int
+		nonCapt           []string
+		validNonC         int
+		badNonCapt        []string
+		validBadNonC      int
+	}{
+		{"London", "fen rnbqk2r/pp3ppp/3bpn2/P1pp4/3P1B2/2PBP3/1P1N1PPP/R2QK1NR b KQkq - 0 8", "d6f4", "e8g8", "c8f5", []string{"c5d4", "d6f4"}, 1, []string{"d8a5"}, 1, []string{"b8c6", "b7b6"}, 2, []string{"d6e5", "f6g4", "f6h5"}, 3},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b := &board
+			handlePosition("position " + tt.pos)
+			var transMove, k1, k2 move
+			mFr, mTo := fen2Sq[tt.transMove[0:2]], fen2Sq[tt.transMove[2:]]
+			mPc, mCp := board.sq[mFr], board.sq[mTo]
+			transMove.packMove(mFr, mTo, mPc, mCp, empty, b.ep, b.castlings)
+
+			mFr, mTo = fen2Sq[tt.k1[0:2]], fen2Sq[tt.k1[2:]]
+			mPc, mCp = board.sq[mFr], board.sq[mTo]
+			k1.packMove(mFr, mTo, mPc, mCp, empty, b.ep, b.castlings)
+
+			mFr, mTo = fen2Sq[tt.k2[0:2]], fen2Sq[tt.k2[2:]]
+			mPc, mCp = board.sq[mFr], board.sq[mTo]
+			k2.packMove(mFr, mTo, mPc, mCp, empty, b.ep, b.castlings)
+			killers.add(k2, 0)
+			killers.add(k1, 0)
+
+			history.clear()
+			// incr history for good non captures
+			for _, strMv := range tt.nonCapt {
+				mFr, mTo = fen2Sq[strMv[0:2]], fen2Sq[strMv[2:]]
+				mPc, mCp = board.sq[mFr], board.sq[mTo]
+
+				history.inc(mFr, mTo, b.stm, 8)
+			}
+
+			var genInfo = genInfoStruct{sv: 0, ply: 0, transMove: transMove}
+			var mv move
+			var msg string
+
+			// trans
+			if mv, msg = nextNormal(&genInfo, &board); !mv.cmp(transMove) {
+				t.Errorf("%v: nextNormal() = %v, want transMove=%v", msg, mv, transMove)
+			}
+
+			//good capt
+			cntFound := 0
+			ix := 0
+			for mv, msg = nextNormal(&genInfo, &board); genInfo.sv <= nextGoodCp; mv, msg = nextNormal(&genInfo, &board) {
+				for _, strMv := range tt.goodCapt {
+					if mv.String() == strMv {
+						fmt.Println("found good capt", mv, mv.eval())
+						cntFound++
+					}
+				}
+				ix++
+			}
+			if cntFound != tt.validGoodC {
+				t.Errorf("cntFound=%v, didn't find all goodCapt %v", cntFound, tt.validGoodC)
+			}
+
+			//k1
+			if !mv.cmp(k1) {
+				t.Errorf("nextNormal() = %v, want k1=%v", mv, k1)
+			}
+			mv, msg = nextNormal(&genInfo, &board)
+
+			//k2 not legal
+
+			//good non capt
+			cntFound = 0
+			cntFound2 := 0
+			ix = 0
+			for genInfo.sv <= nextNonCp {
+				if mv.String() == transMove.String() {
+					t.Errorf("nextNormal() = %v, DON'T want transMove=%v", mv, transMove)
+				}
+				if mv.String() == k1.String() {
+					t.Errorf("nextNormal() = %v, DON'T want k1=%v", mv, k1)
+				}
+				if mv.String() == k2.String() {
+					t.Errorf("nextNormal() = %v, DON'T want k2=%v", mv, k2)
+				}
+
+				for _, strMv := range tt.nonCapt {
+					if mv.String() == strMv {
+						fmt.Println(msg, "found good noncapt", mv, int(history.get(mv.fr(), mv.to(), b.stm)))
+						cntFound++
+					}
+				}
+				for _, strMv := range tt.badNonCapt {
+					if mv.String() == strMv {
+						fmt.Println(msg, "found bad noncapt", mv, int(history.get(mv.fr(), mv.to(), b.stm)))
+						cntFound2++
+					}
+				}
+				mv, msg = nextNormal(&genInfo, &board)
+				ix++
+			}
+			if cntFound != tt.validNonC {
+				t.Errorf("cntFound=%v, didn't find all nonCapt %v", cntFound, tt.validNonC)
+			}
+			if cntFound2 != tt.validBadNonC {
+				t.Errorf("cntFound=%v, didn't find all bad nonCapt %v", cntFound2, tt.validBadNonC)
+			}
+
+			//badCp
+			cntFound = 0
+			ix = 0
+			for mv != noMove {
+				if mv.String() == transMove.String() {
+					t.Errorf("nextNormal() = %v, DON'T want transMove=%v", mv, transMove)
+				}
+
+				for _, strMv := range tt.badCapt {
+					if mv.String() == strMv {
+						fmt.Println("found badCapt", mv, mv.eval())
+						cntFound++
+					}
+				}
+				mv, msg = nextNormal(&genInfo, &board)
+				ix++
+			}
+			if cntFound != tt.validBadC {
+				t.Errorf("cntFound=%v, didn't find all badCapt %v", cntFound, tt.validBadC)
+			}
+
+		})
+	}
+}

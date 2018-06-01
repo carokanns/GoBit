@@ -67,6 +67,8 @@ func uci(input chan string) {
 			fmt.Println("eval =", evaluate(&board))
 		case "pos":
 			handleMyPositions(words)
+		case "moves":
+			handleMyMoves(words)
 		case "key":
 			fmt.Printf("key = %x, fullkey=%x\n", board.key, board.fullKey())
 			index := board.fullKey() & uint64(trans.mask)
@@ -88,7 +90,10 @@ func uci(input chan string) {
 			fmt.Println("see = ", see(fr, to, &board))
 		case "qs":
 			fmt.Println("qs =", qs(maxEval, &board))
-
+		case "hist":
+			history.Print(50)
+		case "moveval": // all moves and values
+			handleMoveVal()
 		default:
 			tell("info string unknown cmd ", cmd)
 		}
@@ -100,7 +105,7 @@ func uci(input chan string) {
 func handleUci() {
 	tell("id name GoBit")
 	tell("id author Carokanns")
-	
+
 	tell("option name Hash type spin default 128 min 16 max 1024")
 	tell("option name Threads type spin default 1 min 1 max 16")
 	tell("uciok")
@@ -112,6 +117,7 @@ func handleIsReady() {
 
 func handleNewgame() {
 	board.newGame()
+	history.clear()
 }
 
 func handlePosition(cmd string) {
@@ -260,22 +266,83 @@ func handleGo(toEng chan bool, words []string) {
 	}
 }
 
-func handleMyPositions(words []string){
-	if len(words) <2{
-		tell ("info string not correct pos command "+ strings.Join(words[:], " "))
+func handleMyPositions(words []string) {
+	if len(words) < 2 {
+		tell("info string not correct pos command " + strings.Join(words[:], " "))
 	}
 
 	words[1] = trim(low(words[1]))
-	handleSetOption(strings.Split("setoption name hash value 256"," "))
-	trans.clear()
-	switch words[1]{
-	case "london": handlePosition("position startpos moves d2d4 d7d5 c1f4 g8f6 e2e3 c7c5 b1d2 b8c6 c2c3 e7e6 f1d3 f8d6")
-	case "phil": handlePosition("position startpos moves e2e4 d7d6 d2d4 e7e5 d4e5 d6e5 d1d8 e8d8 g1f3 f7f6 b1c3 c7c6 f1c4")
-	case "english": handlePosition("position startpos moves c2c4 e7e5 g2g3 b8c6 f1g2 g7g6 b1c3 f8g7 e2e4 d7d6 g1e2 g8f6")
-	default: tell ("info string not correct pos command "+words[1]+" doesn't exist. " + strings.Join(words[:], " "))
+	handleSetOption(strings.Split("setoption name hash value 256", " "))
+
+	switch words[1] {
+	case "london":
+		handlePosition("position startpos moves d2d4 d7d5 c1f4 g8f6 e2e3 c7c5 b1d2 b8c6 c2c3 e7e6 f1d3 f8d6")
+	case "phil":
+		handlePosition("position startpos moves e2e4 d7d6 d2d4 e7e5 d4e5 d6e5 d1d8 e8d8 g1f3 f7f6 b1c3 c7c6 f1c4")
+	case "english":
+		handlePosition("position startpos moves c2c4 e7e5 g2g3 b8c6 f1g2 g7g6 b1c3 f8g7 e2e4 d7d6 g1e2 g8f6")
+	default:
+		tell("info string not correct pos command " + words[1] + " doesn't exist. " + strings.Join(words[:], " "))
 	}
+
+	history.clear()
+	trans.clear()
+}
+func handleMyMoves(words []string) {
+	mvString := strings.Join(words[1:], " ")
+	parseMvs(mvString)
 }
 
+func handleMoveVal() {
+	// print all legal moves with different values
+	b := &board
+	transMove := noMove
+	transDepth := 4
+	ply := 1
+
+	var transSc, scType int
+	ok := false
+
+	transMove, transSc, scType, ok = trans.retrieve(b.fullKey(), transDepth, ply)
+	_, _, _ = ok, transSc, scType
+
+	var childPV pvList
+	childPV.new() // TODO? make it smaller for each depth maxDepth-ply
+	//bs, score := noScore, noScore
+	//bm := noMove
+
+	var genInfo = genInfoStruct{sv: 0, ply: 1, transMove: transMove}
+	next = nextNormal
+	ix := 0
+	bestSc, bestMv, bestHsc, bestHmv := minEval, noMove, minEval, noMove
+	bestHmsg, bestMsg := "", ""
+	for mv, msg := next(&genInfo, b); mv != noMove; mv, msg = next(&genInfo, b) {
+		if !b.move(mv) {
+			continue
+		}
+		b.unmove(mv)
+		seeVal := see(mv.fr(), mv.to(), &board)
+		sc := int(history.get(mv.fr(), mv.to(), board.stm))
+		if sc > bestHsc {
+			bestHsc = sc
+			bestHmv = mv
+			bestHmsg = msg
+		}
+		if seeVal < 0 {
+			sc = seeVal
+		}
+
+		if sc > bestSc {
+			bestSc = sc
+			bestMv = mv
+			bestMsg = msg
+		}
+		fmt.Printf("%v: %v history %v, see %v, pcSqTab %v (%v)\n", ix+1, mv, history.get(mv.fr(), mv.to(), board.stm), see(mv.fr(), mv.to(), &board), pcSqScore(mv.pc(), mv.to()), msg)
+		ix++
+	}
+
+	fmt.Printf("best History (%v): %v %v    best hist+see (%v): %v %v  \n", bestHmsg, bestHmv, bestHsc, bestMsg, bestMv, bestSc)
+}
 
 // not implemented uci commands
 func handlePonderhit() {

@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"reflect"
 	"testing"
 )
 
@@ -606,4 +607,85 @@ func findMoves(ml *moveList, stringMvs []string) (bool, move) {
 		}
 	}
 	return true, 0
+}
+
+func Test_boardStruct_isLegal(t *testing.T) {
+	tests := []struct {
+		name               string
+		fen                string
+		fr, to, pc, cp, pr int
+		want               bool
+	}{
+		{"wrong fr", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R w KQkq - 4 5", A3, A4, wP, empty, empty, false},
+		{"wrong fr2", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R w KQkq - 4 5", A3, A4, empty, empty, empty, false},             //
+		{"correct fr", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R w KQkq - 4 5", A2, A4, wP, empty, empty, true},                //
+		{"wrong col", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R w KQkq - 4 5", G8, H6, bP, empty, empty, false},                //
+		{"wrong to", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R w KQkq - 4 5", G8, H6, bP, empty, empty, false},                 //
+		{"wrong to2", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R w KQkq - 4 5", F1, H3, wB, empty, empty, false},                //
+		{"jump over", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R w KQkq - 4 5", H1, H3, wR, empty, empty, false},                //
+		{"wP 2step", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R w KQkq - 4 5", D2, D4, wP, empty, empty, false},                 //
+		{"wP 2step2", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R w KQkq - 4 5", D2, D4, wP, bP, empty, false},                   //
+		{"bP 1step", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R b KQkq - 4 5", B7, B6, bP, empty, empty, false},                 //
+		{"wP 1step", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R w KQkq - 4 5", G2, G3, wP, empty, empty, false},                 //
+		{"wP 2step3", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R w KQkq - 4 5", G2, G4, wP, empty, empty, false},                //
+		{"wP correct 1", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R w KQkq - 4 5", B2, B4, wP, empty, empty, true},              //
+		{"wP correct 2", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R w KQkq - 4 5", E5, E6, wP, empty, empty, true},              //
+		{"bP correct 1", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R b KQkq - 4 5", C7, C5, bP, empty, empty, true},              //
+		{"bP correct 2", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R b KQkq - 4 5", D4, D3, bP, empty, empty, true},              //
+		{"wP correct 3", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R w KQkq - 4 5 moves c2c3 d4c3", B2, C3, wP, bP, empty, true}, //
+		{"wP correct 4", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R w KQkq - 4 5 moves c2c3 d4c3", D2, C3, wP, bP, empty, true}, //
+		{"wN correct", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R w KQkq -  moves c2c3 d4c3", B1, C3, wN, bP, empty, true},      //
+		{"wN wrong", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R w KQkq - 4 5 moves c2c3 d4c3", B1, C3, wN, empty, empty, false}, //
+		{"bQ wrong", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R b KQkq - 4 5", D8, D4, bQ, empty, empty, false},                 //
+		{"bQ wrong2", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R b KQkq - 4 5", D8, H4, bQ, empty, empty, false},                //
+		{"bQ correct", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R b KQkq - 4 5", D8, D5, bQ, empty, empty, true},                //
+		{"wQ wrong", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R w KQkq - 4 5", D1, D4, wQ, bP, empty, false},                    //
+		{"wQ correct", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R w KQkq - 4 5", D1, F3, wQ, empty, empty, true},                //
+		{"wEp correct", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R b KQkq - 4 5 moves f7f5", E5, F6, wP, bP, empty, true},       //
+		{"wEp wrong", "fen r1bqkbnr/ppp1pppp/1n6/4P3/3p4/6N1/PPPP1PPP/RNBQKB1R b KQkq - 4 5 moves f7f5", E5, D6, wP, bP, empty, false},        //
+
+		{"bProm correct", "fen r1bq2nr/pp1k1Ppp/1np1p3/2b5/2B5/N4PN1/Pp1P2PP/R1BQK2R b KQ - 1 11", B2, A1, bP, wR, bQ, true},     //
+		{"bProm correct2", "fen r1bq2nr/pp1k1Ppp/1np1p3/2b5/2B5/N4PN1/Pp1P2PP/R1BQK2R b KQ - 1 11", B2, C1, bP, wB, bN, true},    //
+		{"bProm correct3", "fen r1bq2nr/pp1k1Ppp/1np1p3/2b5/2B5/N4PN1/Pp1P2PP/R1BQK2R b KQ - 1 11", B2, B1, bP, empty, bR, true}, //
+		{"bProm wrong", "fen r1bq2nr/pp1k1Ppp/1np1p3/2b5/2B5/N4PN1/Pp1P2PP/R1BQK2R b KQ - 1 11", B2, B1, bP, empty, empty, true}, //
+
+		{"wProm correct", "fen r1bq2nr/pp1k1Ppp/1np1p3/2b5/2B5/N4PN1/Pp1P2PP/R1BQK2R w KQ - 1 11", F7, F8, wP, empty, wQ, true}, //
+		{"wProm correct2", "fen r1bq2nr/pp1k1Ppp/1np1p3/2b5/2B5/N4PN1/Pp1P2PP/R1BQK2R w KQ - 1 11", F7, G8, wP, bN, wR, true},   //
+		{"wProm wrong", "fen r1bq2nr/pp1k1Ppp/1np1p3/2b5/2B5/N4PN1/Pp1P2PP/R1BQK2R w KQ - 1 11", F7, E8, wP, empty, wQ, false},  //
+
+		{"wCastl wrong", "fen r1bq2nr/pp1k1Ppp/1np1p3/2b5/2B5/N4PN1/Pp1P2PP/R1BQK2R w KQ - 1 11", E8, G8, wK, empty, empty, false}, //
+		{"bCastl wrong", "fen r1bq2nr/pp1k1Ppp/1np1p3/2b5/2B5/N4PN1/Pp1P2PP/R1BQK2R b KQ - 1 11", E8, G8, wK, empty, empty, false}, //
+		{"wCastl correct", "fen r3kbnr/pppqpppp/1n6/4Pb2/2Bp4/3P2N1/PPP2PPP/RNBQK2R w KQkq - 1 7", E1, G1, wK, empty, empty, true}, //
+		{"bCastl correct", "fen r3kbnr/pppqpppp/1n6/4Pb2/2Bp4/3P2N1/PPP2PPP/RNBQK2R b KQkq - 1 7", E8, C8, bK, empty, empty, true}, //
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handlePosition("position " + tt.fen)
+
+			var mv move
+			mv.packMove(tt.fr, tt.to, tt.pc, tt.cp, tt.pr, board.ep, board.castlings)
+			if got := board.isLegal(mv); got != tt.want {
+				t.Errorf("board.isLegal() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_pcColor(t *testing.T) {
+	tests := []struct {
+		name string
+		pc int
+		want color
+	}{
+		{"wP",wP,WHITE},
+		{"bB",bB,BLACK},
+		{"empty",empty,BLACK},   //NOTE!
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := pcColor(tt.pc); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("pcColor() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

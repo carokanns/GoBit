@@ -137,7 +137,7 @@ func sizeToBits(size int) uint {
 	return bits
 }
 
-// clear all entries
+// clear all entries, age and counters
 func (t *transpStruct) clear() {
 	var e ttEntry
 	e.clear()
@@ -191,7 +191,7 @@ func (b *boardStruct) fullKey() uint64 {
 // We always try to replace another age and/or a lower searched depth
 
 func (t *transpStruct) store(fullKey uint64, mv move, depth, ply, sc, scoreType int) {
-	//	fmt.Println("store:", mv, depth, ply, sc, scoreType)
+
 	t.cStores++
 	sc = removeMatePly(sc, ply)
 
@@ -231,7 +231,7 @@ func (t *transpStruct) store(fullKey uint64, mv move, depth, ply, sc, scoreType 
 
 		selDepth := -int(entry.depth)
 		if entry.age != uint8(t.age) {
-			selDepth += 1000
+			selDepth += 1000    // make age more important than depth
 		}
 
 		if selDepth > bestDep {
@@ -274,7 +274,7 @@ func (t *transpStruct) retrieve(fullKey uint64, depth, ply int) (mv move, sc, sc
 			t.cFound++
 
 			if int(entry.age) != t.age { // from another generation?
-				entry.age = uint8(t.age) // touch entry
+				entry.age = uint8(t.age) 
 				t.cntUsed++
 			}
 			mv = move(entry.move)
@@ -326,7 +326,7 @@ func addMatePly(sc, ply int) int {
 	if sc < minEval+maxPly {
 		return mateEval - ply
 	} else if sc > maxEval-maxPly {
-		return -mateEval+ply
+		return -mateEval + ply
 	}
 	return sc
 }

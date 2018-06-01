@@ -109,8 +109,7 @@ func (e *ebfStruct) ebf() float64 {
 	if prevNodes2 > 0.0 && prevNodes3 > 0.0 {
 		ebf = (prevNodes2/prevNodes3 + prevNodes1/prevNodes2) / 2
 	}
-	fmt.Printf("ebf: %0.2f  Stored: %v Tried: %v Found: %v Prunes: %v Best: %v\n", ebf, trans.cStores, trans.cTried, trans.cFound, trans.cPrune, trans.cBest)
-
+	fmt.Printf("ebf: %0.2f age=%v Used=%v Stored: %v Tried: %v Found: %v Prunes: %v Best: %v\n", ebf, trans.age, trans.cntUsed, trans.cStores, trans.cTried, trans.cFound, trans.cPrune, trans.cBest)
 	return ebf
 }
 
@@ -131,8 +130,6 @@ func root(toEngine chan bool, frEngine chan string) {
 	var ml moveList
 	childPV.new()
 	pv.new()
-	childPV.new()
-	// ml = make(moveList, 0, 60)
 	ml.new(60)
 	ebfTab.new()
 	b := &board
@@ -143,13 +140,16 @@ func root(toEngine chan bool, frEngine chan string) {
 		killers.clear()
 		ml.clear()
 		pv.clear()
+
 		trans.initSearch() // incr age coounters=0
-		//trans.clear()
+
 		genAndSort(0, b, &ml)
 		bm := ml[0]
 		bs := noScore
 		depth = 0
-		transDepth:=0
+
+		transDepth := 0
+
 		for depth = 1; depth <= limits.depth && !limits.stop; depth++ {
 			ml.sort()
 			bs = noScore // bm keeps the best from prev iteration in case of immediate stop before first is done in this iterastion
@@ -159,9 +159,10 @@ func root(toEngine chan bool, frEngine chan string) {
 
 				b.move(mv)
 				tell("info depth ", strconv.Itoa(depth), " currmove ", mv.String(), " currmovenumber ", strconv.Itoa(ix+1))
-
 				score := -search(-beta, -alpha, depth-1, 1, &childPV, b)
+	
 				b.unmove(mv)
+
 				if limits.stop {
 					break
 				}
@@ -225,10 +226,11 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 	if depth < 0 { // inCheck?
 		transDepth = 0
 	}
-	{ // keep spme variables local just to be sure
+
+	{ // keep spme variables local just to be sure   - TRANS.RETRIEVE
 		var transSc, scType int
 		ok := false
-		
+
 		if transMove, transSc, scType, ok = trans.retrieve(b.fullKey(), transDepth, ply); ok && !pvNode {
 			switch {
 			case scType == scoreTypeLower && transSc >= beta:
@@ -244,35 +246,37 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 		}
 	}
 
-	var ml moveList
-	//ml= make(moveList, 0, 60)
-	ml.new(60)
-
-	//genAndSort(b, &ml)
-	genInOrder(b, &ml, ply, transMove)
-
-
-	bs,score := noScore, noScore
-	bm := noMove
 	var childPV pvList
 	childPV.new() // TODO? make it smaller for each depth maxDepth-ply
-	for _, mv := range ml {
+	bs, score := noScore, noScore
+	bm := noMove
+
+	/*	var ml moveList
+		ml.new(60)
+		genInOrder(b, &ml, ply, transMove)
+		for _, mv := range ml {
+	*/
+	var genInfo = genInfoStruct{sv: 0, ply: ply, transMove: transMove}
+	next = nextNormal
+	for mv, msg := next(&genInfo, b); mv != noMove; mv, msg = next(&genInfo, b) {
+		_ = msg
+
 		if !b.move(mv) {
 			continue
 		}
 
 		childPV.clear()
 
-	/* 	if pvNode && bm != noMove {
+		/* 	if pvNode && bm != noMove {
 			score =  -search(-alpha-1, -alpha, depth-1, ply+1, &childPV, b)
 			if score > alpha { // PVS/LMR re-search
 				score = -search(-beta, -alpha, depth-1, ply+1, &childPV, b)
 			}
 		} else {
- */			
- 	score = -search(-beta, -alpha, depth-1, ply+1, &childPV, b)
-//		}
-		
+		*/
+		score = -search(-beta, -alpha, depth-1, ply+1, &childPV, b)
+		//		}
+
 		b.unmove(mv)
 
 		if score > bs {
@@ -292,6 +296,7 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 				if mv.cmp(transMove) {
 					trans.cPrune++
 				}
+				history.inc(mv.fr(), mv.to(), b.stm, depth)
 				return score
 			}
 		}
@@ -376,6 +381,7 @@ func qs(beta int, b *boardStruct) int {
 // see (Static Echange Evaluation)
 // Start with the capture fr-to and find out all the other captures to to-sq
 func see(fr, to int, b *boardStruct) int {
+	var pVal = [16]int{100, -100, 325, -325, 325, -325, 500, -500, 950, -950, 10000, -10000, 0, 0, 0, 0}
 	pc := b.sq[fr]
 	cp := b.sq[to]
 	cnt := 1
@@ -395,15 +401,15 @@ func see(fr, to int, b *boardStruct) int {
 	attackingBB &= occ
 
 	if (attackingBB & b.wbBB[them]) == 0 { // 'they' have no attackers - good bye
-		return abs(pieceVal[cp]) // always return score from 'our' point of view
+		return abs(pVal[cp]) // always return score from 'our' point of view
 	}
 
 	// Now we continue to keep track of the material gain/loss for each capture
 	// Always remove the last attacker and use x-ray to find possible new attackers
 
-	lastAtkVal := abs(pieceVal[pc]) // save attacker piece value for later use
+	lastAtkVal := abs(pVal[pc]) // save attacker piece value for later use
 	var captureList [32]int
-	captureList[0] = abs(pieceVal[cp])
+	captureList[0] = abs(pVal[cp])
 	n := 1
 
 	stm := them // change side to move
@@ -442,12 +448,12 @@ func see(fr, to int, b *boardStruct) int {
 		n++
 
 		// save the value of tha capturing piece to be used later
-		lastAtkVal = pieceVal[pt2pc(pt, WHITE)] // using WHITE always gives positive integer
+		lastAtkVal = pVal[pt2pc(pt, WHITE)]     // using WHITE always gives positive integer
 		stm = stm.opp()                         // next side to move
 
 		if pt == King && (attackingBB&b.wbBB[stm]) != 0 { //NOTE: just changed stm-color above
 			// if king capture and 'they' are atting we have to stop
-			captureList[n] = pieceVal[wK]
+			captureList[n] = pVal[wK]
 			n++
 			break
 		}
@@ -534,10 +540,14 @@ func genInOrder(b *boardStruct, ml *moveList, ply int, transMove move) {
 		for ix := noCaptIx; ix < len(*ml); ix++ {
 			mv := (*ml)[ix]
 			switch {
-			case killers[ply].k1.cmp(mv) && !mv.cmp(transMove):
+			case killers[ply].k1.cmpFrTo(mv) && !mv.cmpFrTo(transMove) && b.sq[mv.to()] == empty:
+				mv.packMove(mv.fr(), mv.to(), b.sq[mv.fr()], b.sq[mv.to()], mv.pr(), b.ep, b.castlings)
+				(*ml)[ix] = mv
 				(*ml)[ix], (*ml)[pos1] = (*ml)[pos1], (*ml)[ix]
 				cnt++
-			case killers[ply].k2.cmp(mv) && !mv.cmp(transMove):
+			case killers[ply].k2.cmpFrTo(mv) && !mv.cmpFrTo(transMove) && b.sq[mv.to()] == empty:
+				mv.packMove(mv.fr(), mv.to(), b.sq[mv.fr()], b.sq[mv.to()], mv.pr(), b.ep, b.castlings)
+				(*ml)[ix] = mv
 				(*ml)[ix], (*ml)[pos2] = (*ml)[pos2], (*ml)[ix]
 				cnt++
 			}
@@ -586,6 +596,9 @@ type historyStruct [2][64][64]uint
 func (h *historyStruct) inc(fr, to int, stm color, depth int) {
 	h[stm][fr][to] += uint(depth * depth)
 }
+func (h *historyStruct) get(fr, to int, stm color) uint {
+	return h[stm][fr][to]
+}
 
 func (h *historyStruct) clear() {
 	for fr := 0; fr < 64; fr++ {
@@ -596,4 +609,247 @@ func (h *historyStruct) clear() {
 	}
 }
 
+func (h historyStruct) Print(n int) {
+	fmt.Println("history top", n)
+	type top50 struct{ fr, to, sd, sc uint }
+	var hTab = make([]top50, n, n)
+	for ix := range hTab {
+		hTab[ix].fr, hTab[ix].to, hTab[ix].sd, hTab[ix].sc = 0, 0, 0, 0
+	}
+
+	W, B := uint(WHITE), uint(BLACK)
+	for fr := uint(0); fr < 64; fr++ {
+		for to := uint(0); to < 64; to++ {
+			sc := h.get(int(fr), int(to), WHITE)
+			for ix := range hTab {
+				if sc > hTab[ix].sc {
+					for ix2 := n - 2; ix2 >= ix; ix2-- {
+						hTab[ix2+1] = hTab[ix2]
+					}
+					hTab[ix].fr, hTab[ix].to, hTab[ix].sd, hTab[ix].sc = fr, to, W, sc
+					break
+				}
+			}
+
+			sc = h.get(int(fr), int(to), BLACK)
+			for ix := range hTab {
+				if sc > hTab[ix].sc {
+					for ix2 := n - 2; ix2 >= ix; ix2-- {
+						hTab[ix2+1] = hTab[ix2]
+					}
+					hTab[ix].fr, hTab[ix].to, hTab[ix].sd, hTab[ix].sc = fr, to, B, sc
+					break
+				}
+			}
+		}
+	}
+	for ix, ht := range hTab {
+		if ht.fr == 0 && ht.to == 0 {
+			continue
+		}
+		fmt.Printf("%2v: %v %v-%v   %v  \n", ix+1, color(ht.sd).String(), sq2Fen[int(ht.fr)], sq2Fen[int(ht.to)], ht.sc)
+	}
+}
+
 var history historyStruct
+
+/////////////////////////// Next move /////////////////////////////////////
+var next func(*genInfoStruct, *boardStruct) (move, string) // or nextKEvasion or nextQS
+
+const (
+	initNext = iota
+	nextTr
+	nextFirstGoodCp
+	nextGoodCp
+	nextK1
+	nextK2
+	nextCounterMv
+	nextFirstNonCp
+	nextNonCp
+	nextBadCp
+	nextEnd
+)
+
+type genInfoStruct struct {
+	// to be filled in, before first call to the next-function
+	sv, ply   int
+	transMove move
+
+	// handle by the next-function
+	captures, nonCapt moveList
+	counterMv         move
+}
+
+func nextNormal(genInfo *genInfoStruct, b *boardStruct) (move, string) {
+	switch genInfo.sv {
+	case initNext:
+		genInfo.sv = nextTr
+		fallthrough
+	case nextTr:
+		genInfo.sv = nextFirstGoodCp
+		if genInfo.transMove != noMove {
+			if b.isLegal(genInfo.transMove) {
+				return genInfo.transMove, "transMove"
+			}
+		}
+		fallthrough
+	case nextFirstGoodCp:
+		genInfo.captures.new(20)
+		b.genAllCaptures(&genInfo.captures)
+		// pick a good capt - use see - not transMove
+		bs := -1
+		bIx := 0
+		ml := &genInfo.captures
+		for ix := 0; ix < len(*ml); ix++ {
+			if (*ml)[ix].cmp(genInfo.transMove) {
+				continue
+			}
+			sc := see((*ml)[ix].fr(), (*ml)[ix].to(), b)
+			(*ml)[ix].packEval(sc)
+			if sc > bs {
+				bs = sc
+				bIx = ix
+			}
+		}
+		if bs >= 0 {
+			mv := (*ml)[bIx]
+			(*ml)[bIx], (*ml)[len(*ml)-1] = (*ml)[len(*ml)-1], (*ml)[bIx]
+			*ml = (*ml)[:len(*ml)-1]
+			genInfo.sv = nextGoodCp
+			return mv, "first good capt"
+		}
+
+		genInfo.sv = nextK1
+		fallthrough
+	case nextGoodCp:
+		// pick a good capt - use see - not transMove
+		bs := -1
+		bIx := 0
+		ml := &genInfo.captures
+		for ix := 0; ix < len(*ml); ix++ {
+			if (*ml)[ix].cmp(genInfo.transMove) {
+				continue
+			}
+			sc := (*ml)[ix].eval()
+			if sc > bs {
+				bs = sc
+				bIx = ix
+			}
+		}
+		if bs >= 0 {
+			mv := (*ml)[bIx]
+			(*ml)[bIx], (*ml)[len(*ml)-1] = (*ml)[len(*ml)-1], (*ml)[bIx]
+			*ml = (*ml)[:len(*ml)-1]
+			bs, bIx = minEval, -1
+			return mv, "good capt"
+		}
+		genInfo.sv = nextK1
+		fallthrough
+	case nextK1: // not transMove
+		genInfo.sv = nextK2
+		if killers[genInfo.ply].k1 != noMove && !genInfo.transMove.cmpFrTo(killers[genInfo.ply].k1) {
+			if b.isLegal(killers[genInfo.ply].k1) {
+				var mv move
+				mv.packMove(killers[genInfo.ply].k1.fr(), killers[genInfo.ply].k1.to(), b.sq[killers[genInfo.ply].k1.fr()], b.sq[killers[genInfo.ply].k1.to()], killers[genInfo.ply].k1.pr(), b.ep, b.castlings)
+				return mv, "K1"
+			}
+		}
+
+		fallthrough
+	case nextK2: // not transMove
+		genInfo.sv = nextCounterMv
+		if killers[genInfo.ply].k2 != noMove && !genInfo.transMove.cmpFrTo(killers[genInfo.ply].k2) {
+			if b.isLegal(killers[genInfo.ply].k2) {
+				var mv move
+				mv.packMove(killers[genInfo.ply].k2.fr(), killers[genInfo.ply].k2.to(), b.sq[killers[genInfo.ply].k2.fr()], b.sq[killers[genInfo.ply].k2.to()], killers[genInfo.ply].k2.pr(), b.ep, b.castlings)
+				return mv, "K2"
+			}
+		}
+
+		fallthrough
+	case nextCounterMv: // not transMove, not killer1, not killer2
+		genInfo.sv = nextFirstNonCp
+		//	if counterMovex[genInfo.ply][mv.to()] != noMove { // and not transMove and not k1 and not k2
+		//		var mv move
+		//		mv.packMove(counterMv.fr(), counterMv.to(),b.sq[counterMv.fr()],b.sq[counterMv.to()],counterMv.pr(), b.ep,b.castlings)
+		genInfo.counterMv = noMove
+		//check if it is a valid move
+		//		return sv, counterMovex[genInfo.ply][mv.to()]
+		//	}
+
+		fallthrough
+	case nextFirstNonCp: // not transMove, not counterMove, not killer1, not killer2
+		genInfo.nonCapt.new(50)
+		ml := &genInfo.nonCapt
+		b.genAllNonCaptures(ml)
+		// pick by HistoryTab (see will probably not give anything) - I don't want to sort it. hist may change between moves
+		bs := minEval
+		bIx := -1
+		for ix := 0; ix < len(*ml); ix++ {
+			if (*ml)[ix].cmp(genInfo.transMove) || (*ml)[ix].cmp(genInfo.counterMv) || (*ml)[ix].cmp(killers[genInfo.ply].k1) || (*ml)[ix].cmp(killers[genInfo.ply].k2) {
+				continue
+			}
+			sc := int(history.get((*ml)[ix].fr(), (*ml)[ix].to(), b.stm))
+			if sc > bs {
+				bs = sc
+				bIx = ix
+			}
+		}
+		if bIx >= 0 {
+			mv := (*ml)[bIx]
+
+			(*ml)[bIx], (*ml)[len(*ml)-1] = (*ml)[len(*ml)-1], (*ml)[bIx]
+			*ml = (*ml)[:len(*ml)-1]
+
+			genInfo.sv = nextNonCp
+
+			return mv, "first non capt"
+		}
+
+		genInfo.sv = nextBadCp
+		fallthrough
+	case nextNonCp: // not transMove, not counterMove, not killer1, not killer2
+		// pick by HistoryTab (see will probably not give anything)
+		bs := minEval
+		bIx := -1
+		ml := &genInfo.nonCapt
+		for ix := 0; ix < len(*ml); ix++ {
+			if (*ml)[ix].cmp(genInfo.transMove) || (*ml)[ix].cmp(genInfo.counterMv) || (*ml)[ix].cmp(killers[genInfo.ply].k1) || (*ml)[ix].cmp(killers[genInfo.ply].k2) {
+				continue
+			}
+			sc := int(history.get((*ml)[ix].fr(), (*ml)[ix].to(), b.stm))
+			if sc > bs {
+				bs = sc
+				bIx = ix
+			}
+		}
+		if bIx >= 0 {
+			mv := (*ml)[bIx]
+			(*ml)[bIx], (*ml)[len(*ml)-1] = (*ml)[len(*ml)-1], (*ml)[bIx]
+			*ml = (*ml)[:len(*ml)-1]
+
+			return mv, "non Capt"
+		}
+
+		genInfo.sv = nextBadCp
+		fallthrough
+	case nextBadCp: // not transMove
+		// pick a bad capt  - use see?
+		mv := noMove
+		ml := &genInfo.captures
+		for ix := len(*ml)-1; ix >=0; ix-- {
+			if (*ml)[ix].cmp(genInfo.transMove) {
+				continue
+			}
+
+			mv = (*ml)[ix]
+	//		(*ml)[ix], (*ml)[len(*ml)-1] = (*ml)[len(*ml)-1], (*ml)[ix]
+			*ml = (*ml)[:len(*ml)-1]
+			break
+		}
+
+		return mv, "bad capt"
+	default: // shouldn't happen
+		panic("neve come here! nextNormal sv=" + strconv.Itoa(genInfo.sv))
+	}
+}

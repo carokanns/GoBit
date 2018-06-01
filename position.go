@@ -162,6 +162,12 @@ type color int
 func (c color) opp() color {
 	return c ^ 0x1
 }
+func (c color) String() string {
+	if c == WHITE {
+		return "W"
+	}
+	return "B"
+}
 
 var board = boardStruct{}
 
@@ -197,7 +203,7 @@ func (b *boardStruct) clear() {
 // make a move
 func (b *boardStruct) move(mv move) bool {
 	newEp := 0
-	// we assume that the move is legally correct (except inChekc())
+	// we assume that the move is legally correct (except for inCheck())
 	fr := mv.fr()
 	to := mv.to()
 	pr := mv.pr()
@@ -275,7 +281,7 @@ func (b *boardStruct) move(mv move) bool {
 }
 
 func (b *boardStruct) unmove(mv move) {
-	b.ep = mv.ep(b.stm)
+	b.ep = mv.ep(b.stm.opp())
 	b.castlings = mv.castl()
 	pc := int(mv.pc())
 	fr := int(mv.fr())
@@ -306,6 +312,149 @@ func (b *boardStruct) unmove(mv move) {
 	}
 	b.key = ^b.key
 	b.stm = b.stm ^ 0x1
+}
+
+// is the move legal (except from inCheck)
+func (b *boardStruct) isLegal(mv move) bool {
+	fr := mv.fr()
+	pc := mv.pc()
+	if b.sq[fr] != pc || pc == empty {
+		return false
+	}
+	if b.stm != pcColor(pc) {
+		return false
+	}
+
+	to := mv.to()
+	cp := mv.cp()
+	if !((pc == wP || pc == bP) && to == b.ep && b.ep!=0) {
+		if b.sq[to] != cp {
+			return false
+		}
+		if cp != empty && pcColor(cp) == pcColor(pc) {
+			return false
+		}
+	}
+
+	switch {
+	case pc == wP:
+		if to-fr == 8 { // wP one step
+			if b.sq[to] == empty {
+				return true
+			}
+		} else if to-fr == 16 {
+			if b.sq[fr+8] == empty && b.sq[fr+16] == empty { // wP two step
+				return true
+			}
+		} else if b.ep == mv.ep(b.stm) && b.sq[to-8] == bP { // wP ep
+			return true
+		} else if to-fr == 7 && cp != empty { // wP capture left
+			return true
+		} else if to-fr == 9 && cp != empty { // wp capture right
+			return true
+		}
+
+		return false
+	case pc == bP:
+		if fr-to == 8 { // bP one step
+			if b.sq[to] == empty {
+				return true
+			}
+		} else if fr-to == 16 {
+			if b.sq[fr-8] == empty && b.sq[fr-16] == empty { // bP two step
+				return true
+			}
+		} else if b.ep == mv.ep(b.stm) && b.sq[to+8] == wP { // bP ep
+			return true
+		} else if fr-to == 7 && cp != empty { // bP capture right
+			return true
+		} else if fr-to == 9 && cp != empty { // bp capture left
+			return true
+		}
+
+		return false
+	case pc == wB, pc == bB:
+		toBB := bitBoard(1) << uint(to)
+		if mBishopTab[fr].atks(b.allBB())&toBB != 0 {
+			return true
+		}
+		return false
+	case pc == wR, pc == bR:
+		toBB := bitBoard(1) << uint(to)
+		if mRookTab[fr].atks(b.allBB())&toBB != 0 {
+			return true
+		}
+		return false
+	case pc == wQ, pc == bQ:
+		toBB := bitBoard(1) << uint(to)
+		if mBishopTab[fr].atks(b.allBB())&toBB != 0 {
+			return true
+		}
+		if mRookTab[fr].atks(b.allBB())&toBB != 0 {
+			return true
+		}
+		return false
+	case pc == wK:
+		if abs(int(to)-int(fr)) == 2 { //castlings
+			if to == G1  {
+				if b.sq[H1]!=wR || b.sq[E1]!=wK{
+					return false
+				}
+				 
+				if b.sq[F1] != empty || b.sq[G1] != empty {
+					return false
+				}
+
+				if !b.isShortOk(b.stm) {
+					return false
+				}
+			} else {
+				if b.sq[A1]!=wR || b.sq[E1]!=wK{
+					return false
+				}
+				if to != C1{
+					return false
+				}
+				if b.sq[B1] != empty || b.sq[C1] != empty|| b.sq[D1] != empty {
+					return false
+				}
+				if !b.isLongOk(b.stm) {
+					return false
+				}
+			}
+		}
+		return true
+	case pc == bK:
+		if abs(int(to)-int(fr)) == 2 { //castlings
+			if to == G8 {
+				if b.sq[H8]!=bR || b.sq[E8]!=bK{
+					return false
+				}
+				if b.sq[F8] != empty || b.sq[G8] != empty {
+					return false
+				}
+				if !b.isShortOk(b.stm) {
+					return false
+				}
+			} else {
+				if b.sq[A8]!=bR || b.sq[E8]!=bK{
+					return false
+				}
+				if to != C8{
+					return false
+				}
+				if b.sq[B8] != empty || b.sq[C8] != empty|| b.sq[D8] != empty {
+					return false
+				}
+				if !b.isLongOk(b.stm) {
+					return false
+				}
+			}
+		}
+		return true
+	}
+
+	return true
 }
 
 func (b *boardStruct) setSq(pc, sq int) {
@@ -926,6 +1075,7 @@ func (b *boardStruct) genAllCaptures(ml *moveList) {
 	b.genQueenMoves(ml, oppBB)
 	b.genKingMoves(ml, oppBB)
 }
+
 // Create a list of captures from pawns to Kings (including promotions) - alternative
 func (b *boardStruct) genAllCapturesy(ml *moveList) {
 	us := b.stm
@@ -1001,7 +1151,7 @@ func (b *boardStruct) genAllCapturesy(ml *moveList) {
 }
 func (b *boardStruct) genAllNonCaptures(ml *moveList) {
 	emptyBB := ^b.allBB()
-	b.genPawnCapt(ml)
+	b.genPawnNonCapt(ml)
 	b.genKnightMoves(ml, emptyBB)
 	b.genBishopMoves(ml, emptyBB)
 	b.genRookMoves(ml, emptyBB)
