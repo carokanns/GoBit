@@ -90,7 +90,7 @@ func Test_boardStruct_allBB(t *testing.T) {
 	}
 }
 
-func Test_move(t *testing.T) {
+func Test_startpos_moves(t *testing.T) {
 	tests := []struct {
 		name      string
 		pos       string
@@ -135,8 +135,8 @@ func Test_unmove(t *testing.T) {
 		wantTo int    // pc on to-sq
 		wantSq [2]int // sqNo and content in sq[sqNo]
 	}{
-		{"", "position startpos e2e4 e7e5 g1f3 g8f6 f1c4 f8c5 e1g1", movStr{E1, G1, wK, empty, empty}, empty, [2]int{F1, empty}},
-		{"", "position startpos e2e4 e7e5 g1f3 g8f6 f1c4 f8c5", movStr{F8, C5, bB, empty, empty}, empty, [2]int{-1, empty}},
+		{"", "position startpos moves e2e4 e7e5 g1f3 g8f6 f1c4 f8c5 e1g1", movStr{E1, G1, wK, empty, empty}, empty, [2]int{F1, empty}},
+		{"", "position startpos moves e2e4 e7e5 g1f3 g8f6 f1c4 f8c5", movStr{F8, C5, bB, empty, empty}, empty, [2]int{-1, empty}},
 	}
 	for _, tt := range tests {
 		handlePosition(tt.pos)
@@ -674,17 +674,48 @@ func Test_boardStruct_isLegal(t *testing.T) {
 func Test_pcColor(t *testing.T) {
 	tests := []struct {
 		name string
-		pc int
+		pc   int
 		want color
 	}{
-		{"wP",wP,WHITE},
-		{"bB",bB,BLACK},
-		{"empty",empty,BLACK},   //NOTE!
+		{"wP", wP, WHITE},
+		{"bB", bB, BLACK},
+		{"empty", empty, BLACK}, //NOTE!
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := pcColor(tt.pc); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("pcColor() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_move_key(t *testing.T) {
+	type movStr struct{ fr, to, pc, cp, pr int }
+	tests := []struct {
+		name string
+		pos  string // must be valid moves in this test
+		mov  movStr // the move to unmove
+	}{
+		{"e4 no capt", "position startpos moves e2e4 d7d5", movStr{E4, E5, wP, empty, empty}},
+		{"exd5 capt", "position startpos moves e2e4 d7d5", movStr{E4, D5, wP, bP, empty}},
+		{"exd5 capt", "position fen r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - moves e2e4 d7d5", 
+			movStr{E4, D5, wP, bP, empty}},
+
+		
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handlePosition(tt.pos)
+			var mv move
+			mv.packMove(tt.mov.fr, tt.mov.to, tt.mov.pc, tt.mov.cp, tt.mov.pr, board.ep, board.castlings)
+			key := board.key
+			board.move(mv)
+			board.unmove(mv)
+
+			if key != board.key {
+				t.Errorf("%v: key %v should be the same after unmove. got %v", tt.name, key, board.key)
 			}
 		})
 	}

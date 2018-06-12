@@ -156,12 +156,18 @@ func root(toEngine chan bool, frEngine chan string) {
 			alpha, beta = minEval, maxEval
 			for ix, mv := range ml {
 				childPV.clear()
-
 				b.move(mv)
 				tell("info depth ", strconv.Itoa(depth), " currmove ", mv.String(), " currmovenumber ", strconv.Itoa(ix+1))
 				score := -search(-beta, -alpha, depth-1, 1, &childPV, b)
-	
+
 				b.unmove(mv)
+
+				////////////////////////////////////
+				if !checkKey(b) {
+					fmt.Println("fullkey=", b.fullKey(), "Key", b.key, mv.StringFull())
+					fmt.Println("INVALID KEY AFTER UNMOVE ROOT")
+				}
+				///////////////////////////////////////
 
 				if limits.stop {
 					break
@@ -201,11 +207,8 @@ func root(toEngine chan bool, frEngine chan string) {
 	}
 }
 
-//TODO search: hash table/transposition table
-
-//TODO search: history table and maybe counter move table
-//TODO search: move generation. More fast and accurate
 //TODO search: Null Move
+
 //TODO search: Late Move Reduction
 //TODO search: Internal Iterative Depening
 //TODO search: Delta Pruning
@@ -219,15 +222,19 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 	}
 	pv.clear()
 
-	transMove := noMove
-	transDepth := depth
 	pvNode := depth > 0 && beta != alpha+1
 
-	if depth < 0 { // inCheck?
+	transMove := noMove
+	useTT := depth >= 0
+	transDepth := depth
+	inCheck := b.isAttacked(b.King[b.stm], b.stm.opp())
+
+	if depth < 0 && inCheck {
+		useTT = true
 		transDepth = 0
 	}
 
-	{ // keep spme variables local just to be sure   - TRANS.RETRIEVE
+	if useTT {
 		var transSc, scType int
 		ok := false
 
@@ -248,14 +255,34 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 
 	var childPV pvList
 	childPV.new() // TODO? make it smaller for each depth maxDepth-ply
+	/////////////////////////////////////// NULL MOVE /////////////////////////////////////////
+	ev := signEval(b.stm, evaluate(b))
+	// null-move pruning
+	if !pvNode && depth > 0 && !isMateScore(beta) && !inCheck && !b.isAntiNullMove() && ev >= beta {
+		nullMv := b.moveNull()
+		sc := minEval
+		if depth <= 3 { // static
+			// if you don't beat me with 100 points,
+			// then I think your position sucks
+			sc = -qs(-beta+1, b)
+		} else { // dynamic
+			sc = -search(-beta, -beta+1, depth-3-1, ply, &childPV, b)
+		}
+
+		b.undoNull(nullMv)
+
+		if sc >= beta {
+			if useTT {
+				trans.store(b.fullKey(), noMove, transDepth, ply, sc, scoreTypeLower)
+			}
+			return sc
+		}
+	}
+	/////////////////////// NULL MOVE END //////////////////////
+
 	bs, score := noScore, noScore
 	bm := noMove
 
-	/*	var ml moveList
-		ml.new(60)
-		genInOrder(b, &ml, ply, transMove)
-		for _, mv := range ml {
-	*/
 	var genInfo = genInfoStruct{sv: 0, ply: ply, transMove: transMove}
 	next = nextNormal
 	for mv, msg := next(&genInfo, b); mv != noMove; mv, msg = next(&genInfo, b) {
@@ -267,36 +294,37 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 
 		childPV.clear()
 
-		/* 	if pvNode && bm != noMove {
-			score =  -search(-alpha-1, -alpha, depth-1, ply+1, &childPV, b)
-			if score > alpha { // PVS/LMR re-search
+		if pvNode && bm != noMove {
+			score = -search(-alpha-1, -alpha, depth-1, ply+1, &childPV, b)
+			if score > alpha {
 				score = -search(-beta, -alpha, depth-1, ply+1, &childPV, b)
 			}
 		} else {
-		*/
-		score = -search(-beta, -alpha, depth-1, ply+1, &childPV, b)
-		//		}
+			score = -search(-beta, -alpha, depth-1, ply+1, &childPV, b)
+		}
 
 		b.unmove(mv)
-
+		
 		if score > bs {
 			bs = score
 			bm = mv
 			pv.catenate(mv, &childPV)
 			if score > alpha {
 				alpha = score
-				trans.store(b.fullKey(), mv, depth, ply, score, scoreType(score, alpha, beta))
+				if useTT {
+					trans.store(b.fullKey(), mv, transDepth, ply, score, scoreType(score, alpha, beta))
+				}
 			}
 
 			if score >= beta { // beta cutoff
 				// add killer and update history
 				if mv.cp() == empty && mv.pr() == empty {
 					killers.add(mv, ply)
+					history.inc(mv.fr(), mv.to(), b.stm, depth)
 				}
 				if mv.cmp(transMove) {
 					trans.cPrune++
 				}
-				history.inc(mv.fr(), mv.to(), b.stm, depth)
 				return score
 			}
 		}
@@ -326,6 +354,14 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 		trans.cBest++
 	}
 	return bs
+}
+
+// is this a position to avoid null move?
+func (b *boardStruct) isAntiNullMove() bool {
+	if b.wbBB[b.stm] == b.pieceBB[King]&b.wbBB[b.stm] {
+		return true
+	}
+	return false
 }
 
 func initQS(ml *moveList, b *boardStruct) {
@@ -448,8 +484,8 @@ func see(fr, to int, b *boardStruct) int {
 		n++
 
 		// save the value of tha capturing piece to be used later
-		lastAtkVal = pVal[pt2pc(pt, WHITE)]     // using WHITE always gives positive integer
-		stm = stm.opp()                         // next side to move
+		lastAtkVal = pVal[pt2pc(pt, WHITE)] // using WHITE always gives positive integer
+		stm = stm.opp()                     // next side to move
 
 		if pt == King && (attackingBB&b.wbBB[stm]) != 0 { //NOTE: just changed stm-color above
 			// if king capture and 'they' are atting we have to stop
@@ -582,7 +618,7 @@ func (k *killerStruct) clear() {
 
 // add killer 1 and 2 (Not inCheck, caaptures and promotions)
 func (k *killerStruct) add(mv move, ply int) {
-	if !k[ply].k1.cmp(mv) {
+	if !k[ply].k1.cmpFrTo(mv) {
 		k[ply].k2 = k[ply].k1
 		k[ply].k1 = mv
 	}
@@ -691,6 +727,7 @@ func nextNormal(genInfo *genInfoStruct, b *boardStruct) (move, string) {
 			if b.isLegal(genInfo.transMove) {
 				return genInfo.transMove, "transMove"
 			}
+			genInfo.transMove = noMove
 		}
 		fallthrough
 	case nextFirstGoodCp:
@@ -747,7 +784,7 @@ func nextNormal(genInfo *genInfoStruct, b *boardStruct) (move, string) {
 		fallthrough
 	case nextK1: // not transMove
 		genInfo.sv = nextK2
-		if killers[genInfo.ply].k1 != noMove && !genInfo.transMove.cmpFrTo(killers[genInfo.ply].k1) {
+		if killers[genInfo.ply].k1 != noMove && !genInfo.transMove.cmpFrToP(killers[genInfo.ply].k1) {
 			if b.isLegal(killers[genInfo.ply].k1) {
 				var mv move
 				mv.packMove(killers[genInfo.ply].k1.fr(), killers[genInfo.ply].k1.to(), b.sq[killers[genInfo.ply].k1.fr()], b.sq[killers[genInfo.ply].k1.to()], killers[genInfo.ply].k1.pr(), b.ep, b.castlings)
@@ -758,7 +795,7 @@ func nextNormal(genInfo *genInfoStruct, b *boardStruct) (move, string) {
 		fallthrough
 	case nextK2: // not transMove
 		genInfo.sv = nextCounterMv
-		if killers[genInfo.ply].k2 != noMove && !genInfo.transMove.cmpFrTo(killers[genInfo.ply].k2) {
+		if killers[genInfo.ply].k2 != noMove && !genInfo.transMove.cmpFrToP(killers[genInfo.ply].k2) {
 			if b.isLegal(killers[genInfo.ply].k2) {
 				var mv move
 				mv.packMove(killers[genInfo.ply].k2.fr(), killers[genInfo.ply].k2.to(), b.sq[killers[genInfo.ply].k2.fr()], b.sq[killers[genInfo.ply].k2.to()], killers[genInfo.ply].k2.pr(), b.ep, b.castlings)
@@ -768,11 +805,12 @@ func nextNormal(genInfo *genInfoStruct, b *boardStruct) (move, string) {
 
 		fallthrough
 	case nextCounterMv: // not transMove, not killer1, not killer2
+		genInfo.counterMv = noMove
 		genInfo.sv = nextFirstNonCp
-		//	if counterMovex[genInfo.ply][mv.to()] != noMove { // and not transMove and not k1 and not k2
+		//	if genInfo.counterMv != noMove && !genInfo.counterMv.cmpFrTo(genInfo.transMove) &&
+		//     genInfo.counterMv.cmpFrTo(killers[genInfo.ply].k1) &&  genInfo.counterMv.cmpFrTo(killers[genInfo.ply].k2) {
 		//		var mv move
 		//		mv.packMove(counterMv.fr(), counterMv.to(),b.sq[counterMv.fr()],b.sq[counterMv.to()],counterMv.pr(), b.ep,b.castlings)
-		genInfo.counterMv = noMove
 		//check if it is a valid move
 		//		return sv, counterMovex[genInfo.ply][mv.to()]
 		//	}
@@ -786,7 +824,8 @@ func nextNormal(genInfo *genInfoStruct, b *boardStruct) (move, string) {
 		bs := minEval
 		bIx := -1
 		for ix := 0; ix < len(*ml); ix++ {
-			if (*ml)[ix].cmp(genInfo.transMove) || (*ml)[ix].cmp(genInfo.counterMv) || (*ml)[ix].cmp(killers[genInfo.ply].k1) || (*ml)[ix].cmp(killers[genInfo.ply].k2) {
+			if (*ml)[ix].cmpFrToP(genInfo.transMove) || (*ml)[ix].cmpFrToP(genInfo.counterMv) ||
+				(*ml)[ix].cmpFrToP(killers[genInfo.ply].k1) || (*ml)[ix].cmpFrToP(killers[genInfo.ply].k2) {
 				continue
 			}
 			sc := int(history.get((*ml)[ix].fr(), (*ml)[ix].to(), b.stm))
@@ -814,8 +853,9 @@ func nextNormal(genInfo *genInfoStruct, b *boardStruct) (move, string) {
 		bIx := -1
 		ml := &genInfo.nonCapt
 		for ix := 0; ix < len(*ml); ix++ {
-			if (*ml)[ix].cmp(genInfo.transMove) || (*ml)[ix].cmp(genInfo.counterMv) || (*ml)[ix].cmp(killers[genInfo.ply].k1) || (*ml)[ix].cmp(killers[genInfo.ply].k2) {
-				continue
+			if (*ml)[ix].cmpFrToP(genInfo.transMove) || (*ml)[ix].cmpFrToP(genInfo.counterMv) ||
+				(*ml)[ix].cmpFrToP(killers[genInfo.ply].k1) || (*ml)[ix].cmpFrToP(killers[genInfo.ply].k2) {
+							continue
 			}
 			sc := int(history.get((*ml)[ix].fr(), (*ml)[ix].to(), b.stm))
 			if sc > bs {
@@ -837,13 +877,14 @@ func nextNormal(genInfo *genInfoStruct, b *boardStruct) (move, string) {
 		// pick a bad capt  - use see?
 		mv := noMove
 		ml := &genInfo.captures
-		for ix := len(*ml)-1; ix >=0; ix-- {
+		for ix := len(*ml) - 1; ix >= 0; ix-- {
 			if (*ml)[ix].cmp(genInfo.transMove) {
+				*ml = (*ml)[:len(*ml)-1]
 				continue
 			}
 
 			mv = (*ml)[ix]
-	//		(*ml)[ix], (*ml)[len(*ml)-1] = (*ml)[len(*ml)-1], (*ml)[ix]
+			//		(*ml)[ix], (*ml)[len(*ml)-1] = (*ml)[len(*ml)-1], (*ml)[ix]
 			*ml = (*ml)[:len(*ml)-1]
 			break
 		}
@@ -852,4 +893,91 @@ func nextNormal(genInfo *genInfoStruct, b *boardStruct) (move, string) {
 	default: // shouldn't happen
 		panic("neve come here! nextNormal sv=" + strconv.Itoa(genInfo.sv))
 	}
+}
+
+// StartPerft starts the Perft command that generates all moves until the given depth.
+// It counts the leafs only taht is printed out for each possible move from current pos
+func startPerft(depth int, bd *boardStruct) uint64 {
+	if depth <= 0 {
+		fmt.Printf("Total:\t%v\n", 1)
+		return 0
+	}
+
+	transMove := noMove
+	transMove, _, _, _ = trans.retrieve(bd.fullKey(), depth, 0)
+
+	totCount := uint64(0)
+	var genInfo = genInfoStruct{sv: 0, ply: 0, transMove: transMove}
+	next = nextNormal
+	ix := 0
+	for mv, msg := next(&genInfo, bd); mv != noMove; mv, msg = next(&genInfo, bd) {
+		if !bd.move(mv) {
+			continue
+		}
+		dbg := false
+/* 
+		/////////////////////////////////////////////////////////////
+		if mv.fr() == D4 && mv.to() == F4 {
+			dbg = true
+		}
+		/////////////////////////////////////////////////////////////
+ */
+		count := perft(dbg, depth-1, 1, bd)
+		totCount += count
+		fmt.Printf("%2d: %v \t%v \t%v\n", ix+1, mv.String(), count, msg)
+
+		bd.unmove(mv)
+		ix++
+	}
+	fmt.Println("------------------")
+	fmt.Println()
+	fmt.Printf("Total:\t%v\n", totCount)
+	return totCount
+}
+
+func perft(dbg bool, depth, ply int, bd *boardStruct) uint64 {
+	if depth == 0 {
+		return 1
+	}
+
+	transMove := noMove
+	transMove, _, _, _ = trans.retrieve(bd.fullKey(), depth, ply)
+	ix := 0
+	count := uint64(0)
+	var genInfo = genInfoStruct{sv: 0, ply: ply, transMove: transMove}
+	next = nextNormal
+	for mv, msg := next(&genInfo, bd); mv != noMove; mv, msg = next(&genInfo, bd) {
+		if !bd.move(mv) {
+			continue
+		}
+		_ = msg
+		deb := false
+/* 
+		////////////////////////////////////////////////////////////////
+		if dbg && mv.fr() == F5 && mv.to() == F4 {
+			deb = true
+		}
+		if dbg && mv.fr() == E2 && mv.to() == E4 {
+			deb = true
+		}
+		////////////////////////////////////////////////////////////////
+ */
+		cnt := perft(deb, depth-1, ply+1, bd)
+		count += cnt
+/*
+		/////////////////////////////////////////////
+		if dbg && !deb  {
+			fmt.Println(ix+1, ":(e4)     ", mv.String(), msg, "\t", cnt)
+			if ix==1{
+				fmt.Println("K1",killers[ply].k1.StringFull())
+				fmt.Println("K2",killers[ply].k2.StringFull())
+			}
+		}
+		////////////////////////////////////////////
+*/
+		bd.unmove(mv)
+		ix++
+	}
+
+	return count
 }

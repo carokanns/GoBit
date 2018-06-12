@@ -57,6 +57,16 @@ func uci(input chan string) {
 			handleQuit()
 			quit = true
 			continue
+		///// My own commands ///////////////////
+		case "perft":
+			if len(words) > 1 {
+				depth, err := strconv.Atoi(words[1])
+				if err != nil {
+					tell(err.Error())
+				} else {
+					startPerft(depth, &board)
+				}
+			}
 		case "pb":
 			board.Print()
 		case "pbb":

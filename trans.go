@@ -36,6 +36,56 @@ func initKeys() {
 	for i := 0; i < 16; i++ {
 		randCastl[i] = rand64()
 	}
+
+	// check that all keys are different
+	fmt.Println("checking all random keys")
+	for pc := 0; pc < 12-1; pc++ {
+		for sq := 0; sq < 64; sq++ {
+			key1 := pcSqKey(pc, sq)
+			for pc2 := pc + 1; pc2 < 12; pc2++ {
+				for sq2 := 0; sq2 < 64; sq2++ {
+					if key1 == pcSqKey(pc2, sq2) {
+						fmt.Printf("pc=%v, sq=%v gives the same key as pc=%v, sq=%v \n", pc, sq, pc2, sq2)
+					}
+				}
+			}
+			for ep := A3; ep <= H3; ep++ {
+				if key1 == epKey(ep) {
+					fmt.Printf("pc=%v, sq=%v gives the same key as ep=%v \n", pc, sq, ep)
+				}
+			}
+			for c := uint(0); c < 16; c++ {
+				if key1 == castlKey(c) {
+					fmt.Printf("pc=%v, sq=%v gives the same key as castl=%v \n", pc, sq, c)
+				}
+			}
+		}
+	}
+
+	for ep := A3; ep < H3; ep++ {
+		key1 := epKey(ep)
+		for ep2 := ep + 1; ep2 <= H3; ep2++ {
+			if key1 == epKey(ep2) {
+				fmt.Printf("ep=%vgives the same key as ep=%v \n", ep, ep2)
+			}
+		}
+
+		for c := uint(0); c < 16; c++ {
+			if key1 == castlKey(c) {
+				fmt.Printf("ep=%v is the same key as castl=%v \n", ep, c)
+			}
+		}
+	}
+
+	for c := uint(0); c < 16-1; c++ {
+		key1 := castlKey(c)
+		for c2 := c + 1; c2 < 16; c2++ {
+			if key1 == castlKey(c2) {
+				fmt.Printf("castl=%v is the same key as castl=%v \n", c, c2)
+			}
+		}
+
+	}
 }
 
 // for color we just flip with XOR ffffffffffffffff
@@ -46,7 +96,7 @@ func flipSide(key uint64) uint64 {
 
 // pcSqKey returns the keyvalue för piece on square
 func pcSqKey(pc, sq int) uint64 {
-	return randPcSq[pc*sq]
+	return randPcSq[pc*64+sq]
 }
 
 // epKey returns the keyvalue for the current ep state
@@ -60,6 +110,25 @@ func epKey(epSq int) uint64 {
 // castlKey returns the keyvalue for the current castling state
 func castlKey(castling uint) uint64 {
 	return randCastl[castling]
+}
+
+func checkKey(b *boardStruct) bool {
+	key := uint64(0)
+	for sq, pc := range b.sq {
+		if pc == empty {
+			continue
+		}
+		key ^= pcSqKey(pc, sq)
+	}
+	if b.stm == BLACK {
+		key = ^key
+	}
+
+	if key != b.key {
+		return false
+	}
+
+	return true
 }
 
 ////////////////////////////////////////////////////////
@@ -229,14 +298,14 @@ func (t *transpStruct) store(fullKey uint64, mv move, depth, ply, sc, scoreType 
 			return
 		}
 
-		selDepth := -int(entry.depth)
+		adjDepth := -int(entry.depth)
 		if entry.age != uint8(t.age) {
-			selDepth += 1000    // make age more important than depth
+			adjDepth += 1000 // make age more important than depth
 		}
 
-		if selDepth > bestDep {
+		if adjDepth > bestDep {
 			newEntry = entry
-			bestDep = selDepth
+			bestDep = adjDepth
 		}
 	}
 
@@ -274,7 +343,7 @@ func (t *transpStruct) retrieve(fullKey uint64, depth, ply int) (mv move, sc, sc
 			t.cFound++
 
 			if int(entry.age) != t.age { // from another generation?
-				entry.age = uint8(t.age) 
+				entry.age = uint8(t.age)
 				t.cntUsed++
 			}
 			mv = move(entry.move)

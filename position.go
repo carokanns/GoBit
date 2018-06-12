@@ -314,6 +314,25 @@ func (b *boardStruct) unmove(mv move) {
 	b.stm = b.stm ^ 0x1
 }
 
+// make Null move
+func (b *boardStruct) moveNull() move {
+	mv := noMove
+	mv.packMove(0, 0, empty, empty, empty, b.ep, b.castlings)
+
+	b.ep = 0
+	b.key = ^b.key
+	b.stm = b.stm ^ 0x1
+	return mv
+}
+
+func (b *boardStruct) undoNull(mv move) {
+	b.key = ^b.key
+	b.stm = b.stm ^ 0x1
+
+	b.ep = mv.ep(b.stm)
+	// b.castlings = mv.castl()     // no need!
+}
+
 // is the move legal (except from inCheck)
 func (b *boardStruct) isLegal(mv move) bool {
 	fr := mv.fr()
@@ -327,7 +346,7 @@ func (b *boardStruct) isLegal(mv move) bool {
 
 	to := mv.to()
 	cp := mv.cp()
-	if !((pc == wP || pc == bP) && to == b.ep && b.ep!=0) {
+	if !((pc == wP || pc == bP) && to == b.ep && b.ep != 0) {
 		if b.sq[to] != cp {
 			return false
 		}
@@ -396,11 +415,11 @@ func (b *boardStruct) isLegal(mv move) bool {
 		return false
 	case pc == wK:
 		if abs(int(to)-int(fr)) == 2 { //castlings
-			if to == G1  {
-				if b.sq[H1]!=wR || b.sq[E1]!=wK{
+			if to == G1 {
+				if b.sq[H1] != wR || b.sq[E1] != wK {
 					return false
 				}
-				 
+
 				if b.sq[F1] != empty || b.sq[G1] != empty {
 					return false
 				}
@@ -409,13 +428,13 @@ func (b *boardStruct) isLegal(mv move) bool {
 					return false
 				}
 			} else {
-				if b.sq[A1]!=wR || b.sq[E1]!=wK{
+				if b.sq[A1] != wR || b.sq[E1] != wK {
 					return false
 				}
-				if to != C1{
+				if to != C1 {
 					return false
 				}
-				if b.sq[B1] != empty || b.sq[C1] != empty|| b.sq[D1] != empty {
+				if b.sq[B1] != empty || b.sq[C1] != empty || b.sq[D1] != empty {
 					return false
 				}
 				if !b.isLongOk(b.stm) {
@@ -427,7 +446,7 @@ func (b *boardStruct) isLegal(mv move) bool {
 	case pc == bK:
 		if abs(int(to)-int(fr)) == 2 { //castlings
 			if to == G8 {
-				if b.sq[H8]!=bR || b.sq[E8]!=bK{
+				if b.sq[H8] != bR || b.sq[E8] != bK {
 					return false
 				}
 				if b.sq[F8] != empty || b.sq[G8] != empty {
@@ -437,13 +456,13 @@ func (b *boardStruct) isLegal(mv move) bool {
 					return false
 				}
 			} else {
-				if b.sq[A8]!=bR || b.sq[E8]!=bK{
+				if b.sq[A8] != bR || b.sq[E8] != bK {
 					return false
 				}
-				if to != C8{
+				if to != C8 {
 					return false
 				}
-				if b.sq[B8] != empty || b.sq[C8] != empty|| b.sq[D8] != empty {
+				if b.sq[B8] != empty || b.sq[C8] != empty || b.sq[D8] != empty {
 					return false
 				}
 				if !b.isLongOk(b.stm) {
@@ -1335,9 +1354,6 @@ func (b *boardStruct) printAllLegals() {
 }
 
 func (b *boardStruct) Print() {
-	for _, pc := range b.sq {
-		fmt.Print(pc, ",")
-	}
 	fmt.Println()
 	txtStm := "BLACK"
 	if b.stm == WHITE {
@@ -1463,6 +1479,7 @@ func parseFEN(FEN string) {
 			board.stm = WHITE
 		}
 	}
+	if board.stm==BLACK {board.key = ^board.key}
 
 	// castling
 	board.castlings = 0
