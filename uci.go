@@ -57,7 +57,8 @@ func uci(input chan string) {
 			handleQuit()
 			quit = true
 			continue
-		///// My own commands ///////////////////
+
+			///// My own commands ///////////////////
 		case "perft":
 			if len(words) > 1 {
 				depth, err := strconv.Atoi(words[1])
@@ -347,11 +348,11 @@ func handleMoveVal() {
 			bestMv = mv
 			bestMsg = msg
 		}
-		fmt.Printf("%v: %v history %v, see %v, pcSqTab %v (%v)\n", ix+1, mv, history.get(mv.fr(), mv.to(), board.stm), see(mv.fr(), mv.to(), &board), pcSqScore(mv.pc(), mv.to()), msg)
+		fmt.Printf("%v: %v history %v,\tsee %3v,\tdpcSqTab %v\t(%v)\n", ix+1, mv, history.get(mv.fr(), mv.to(), board.stm), see(mv.fr(), mv.to(), &board), pcSqScore(mv.pc(), mv.to())-pcSqScore(mv.pc(), mv.fr()), msg)
 		ix++
 	}
 
-	fmt.Printf("best History (%v): %v %v    best hist+see (%v): %v %v  \n", bestHmsg, bestHmv, bestHsc, bestMsg, bestMv, bestSc)
+	fmt.Printf("best History (%v): %v %v    \tbest hist+see (%v): %v %v  \n", bestHmsg, bestHmv, bestHsc, bestMsg, bestMv, bestSc)
 }
 
 // not implemented uci commands

@@ -393,9 +393,9 @@ func removeMatePly(sc, ply int) int {
 // addMatePly adjusts mate value with ply if mate score
 func addMatePly(sc, ply int) int {
 	if sc < minEval+maxPly {
-		return mateEval - ply
-	} else if sc > maxEval-maxPly {
 		return -mateEval + ply
+	} else if sc > maxEval-maxPly {
+		return mateEval - ply
 	}
 	return sc
 }

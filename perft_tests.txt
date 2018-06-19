@@ -1,0 +1,68 @@
+Position 1 - start position
+rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1
+ 1 20
+ 2 400
+ 3 8,902
+ 4 197,281
+ 5 4,865,609
+ 6 119,060,324
+ 7 3,195,901,860
+ 8 84,998,978,956
+ 9 2,439,530,234,167
+10 69,352,859,712,417
+11 2,097,651,003,696,806
+12 62,854,969,236,701,747
+13 1,981,066,775,000,396,239
+
+Position 2
+also know as "Kiwipete" by Peter McKenzie [3]
+r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -
+1 48
+2 2039
+3 97862
+4 4085603
+5 193690690
+
+Position 3
+8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - -
+1 14
+2 191
+3 2812
+4 43238
+5 674624
+6 11030083
+7 178633661
+
+
+Position 4
+r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1
+Or mirrored (with the same perft results):
+r2q1rk1/pP1p2pp/Q4n2/bbp1p3/Np6/1B3NBn/pPPP1PPP/R3K2R b KQ - 0 1
+1 6
+2 264
+3 9467
+4 422333
+5 15833292
+6 706045033
+
+Position 5
+This position was discussed on Talkchess and caught bugs in engines
+rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8 
+1 44
+2 1,486
+3 62,379
+4 2,103,487
+5 89,941,194
+
+Position 6
+An alternative Perft given by Steven Edwards 
+r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10
+1 46
+2 2,079
+3 89,890
+4 3,894,594
+5 164,075,551
+6 6,923,051,137
+7 287,188,994,746
+8 11,923,589,843,526
+9 490,154,852,788,714

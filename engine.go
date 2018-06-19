@@ -158,6 +158,7 @@ func root(toEngine chan bool, frEngine chan string) {
 				childPV.clear()
 				b.move(mv)
 				tell("info depth ", strconv.Itoa(depth), " currmove ", mv.String(), " currmovenumber ", strconv.Itoa(ix+1))
+				//fmt.Printf("alpha=%v beta=%v\n",alpha,beta)
 				score := -search(-beta, -alpha, depth-1, 1, &childPV, b)
 
 				b.unmove(mv)
@@ -207,8 +208,6 @@ func root(toEngine chan bool, frEngine chan string) {
 	}
 }
 
-//TODO search: Null Move
-
 //TODO search: Late Move Reduction
 //TODO search: Internal Iterative Depening
 //TODO search: Delta Pruning
@@ -220,6 +219,16 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 		//return signEval(b.stm, evaluate(b))
 		return qs(beta, b)
 	}
+
+	// Are we in mate search?
+	if mateSc := addMatePly(mateEval-1, ply); mateSc < beta {
+		beta = mateSc
+
+		if mateSc <= alpha {
+			return mateSc
+		}
+	}
+
 	pv.clear()
 
 	pvNode := depth > 0 && beta != alpha+1
@@ -284,6 +293,7 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 	bm := noMove
 
 	var genInfo = genInfoStruct{sv: 0, ply: ply, transMove: transMove}
+	cntMoves:=0
 	next = nextNormal
 	for mv, msg := next(&genInfo, b); mv != noMove; mv, msg = next(&genInfo, b) {
 		_ = msg
@@ -302,9 +312,9 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 		} else {
 			score = -search(-beta, -alpha, depth-1, ply+1, &childPV, b)
 		}
-
+		cntMoves++
 		b.unmove(mv)
-		
+
 		if score > bs {
 			bs = score
 			bm = mv
@@ -350,6 +360,19 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 			return alpha
 		}
 	}
+
+	if cntMoves==0{ // whe didn't find any legal moves - either mate or stalemate
+		sc:=0  // we could have a contempt value here instead
+		if inCheck{ // must be a mate
+			sc= -mateEval+ply+1
+		}
+
+		if useTT {
+			trans.store(b.fullKey(), noMove, transDepth, ply, sc, scoreTypeBetween)
+		}
+		return sc
+	}
+
 	if bm.cmp(transMove) {
 		trans.cBest++
 	}
@@ -891,7 +914,7 @@ func nextNormal(genInfo *genInfoStruct, b *boardStruct) (move, string) {
 
 		return mv, "bad capt"
 	default: // shouldn't happen
-		panic("neve come here! nextNormal sv=" + strconv.Itoa(genInfo.sv))
+		panic("never come here! nextNormal sv=" + strconv.Itoa(genInfo.sv))
 	}
 }
 
@@ -915,13 +938,13 @@ func startPerft(depth int, bd *boardStruct) uint64 {
 			continue
 		}
 		dbg := false
-/* 
+	/* 
 		/////////////////////////////////////////////////////////////
 		if mv.fr() == D4 && mv.to() == F4 {
 			dbg = true
 		}
 		/////////////////////////////////////////////////////////////
- */
+ 	*/
 		count := perft(dbg, depth-1, 1, bd)
 		totCount += count
 		fmt.Printf("%2d: %v \t%v \t%v\n", ix+1, mv.String(), count, msg)
@@ -952,7 +975,7 @@ func perft(dbg bool, depth, ply int, bd *boardStruct) uint64 {
 		}
 		_ = msg
 		deb := false
-/* 
+	/* 
 		////////////////////////////////////////////////////////////////
 		if dbg && mv.fr() == F5 && mv.to() == F4 {
 			deb = true
@@ -961,10 +984,10 @@ func perft(dbg bool, depth, ply int, bd *boardStruct) uint64 {
 			deb = true
 		}
 		////////////////////////////////////////////////////////////////
- */
+	*/
 		cnt := perft(deb, depth-1, ply+1, bd)
 		count += cnt
-/*
+	/*
 		/////////////////////////////////////////////
 		if dbg && !deb  {
 			fmt.Println(ix+1, ":(e4)     ", mv.String(), msg, "\t", cnt)
@@ -974,7 +997,7 @@ func perft(dbg bool, depth, ply int, bd *boardStruct) uint64 {
 			}
 		}
 		////////////////////////////////////////////
-*/
+	*/
 		bd.unmove(mv)
 		ix++
 	}

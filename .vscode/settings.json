@@ -13,7 +13,9 @@
     "GoBit.exe~": true,
     "london.txt": true,
     "engine-interface.txt": true,
-    "README.md": true
+    "README.md": true,
+    "perft_tests.txt": true,
+    "temp.goo": true
   },
   "cSpell.words": [
     "Pval",
