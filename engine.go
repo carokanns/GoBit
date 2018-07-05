@@ -97,17 +97,17 @@ func (e *ebfStruct) add(nodes uint64) {
 func (e *ebfStruct) clear() {
 	*e = (*e)[:0]
 }
-func (e *ebfStruct) ebf() float64 {
+func (e *ebfStruct) ebf(depth int) float64 {
 	if len(*e) < 4 {
 		return 0
 	}
 	ebf := 0.0
-	prevNodes1 := float64((*e)[len(*e)-2])
-	prevNodes2 := float64((*e)[len(*e)-3])
-	prevNodes3 := float64((*e)[len(*e)-4])
+	nodes := float64((*e)[len(*e)-1])   // the last depth
+	prevNodes := float64((*e)[len(*e)-2])
 
-	if prevNodes2 > 0.0 && prevNodes3 > 0.0 {
-		ebf = (prevNodes2/prevNodes3 + prevNodes1/prevNodes2) / 2
+	if nodes >  0.0 && prevNodes > 0.0 {
+//		ebf = (prevNodes2/prevNodes3 + prevNodes1/prevNodes2) / 2
+		ebf = nodes/prevNodes 
 	}
 	fmt.Printf("ebf: %0.2f age=%v Used=%v Stored: %v Tried: %v Found: %v Prunes: %v Best: %v\n", ebf, trans.age, trans.cntUsed, trans.cStores, trans.cTried, trans.cFound, trans.cPrune, trans.cBest)
 	return ebf
@@ -144,31 +144,37 @@ func root(toEngine chan bool, frEngine chan string) {
 		trans.initSearch() // incr age coounters=0
 
 		genAndSort(0, b, &ml)
-		bm := ml[0]
-		bs := noScore
 		depth = 0
 
 		transDepth := 0
-
+		inCheck := b.isAttacked(b.King[b.stm], b.stm.opp())
+		bm := ml[0]
+		bs := noScore // bm keeps the best from prev iteration in case of immediate stop before first is done in this iteration
 		for depth = 1; depth <= limits.depth && !limits.stop; depth++ {
 			ml.sort()
 			bs = noScore // bm keeps the best from prev iteration in case of immediate stop before first is done in this iterastion
 			alpha, beta = minEval, maxEval
-			for ix, mv := range ml {
+			for ix, mv := range ml { // root move loop
 				childPV.clear()
+
 				b.move(mv)
-				tell("info depth ", strconv.Itoa(depth), " currmove ", mv.String(), " currmovenumber ", strconv.Itoa(ix+1))
-				//fmt.Printf("alpha=%v beta=%v\n",alpha,beta)
-				score := -search(-beta, -alpha, depth-1, 1, &childPV, b)
+				tell(fmt.Sprintf("info depth %v currmove %v currmovenumber %v", depth, mv.String(), ix+1))
+				lmrRed := 0
+				ext := 0 // TODO: make extension function
+				if ext == 0 {
+					lmrRed = lmr(mv, inCheck, depth, ix+1, ix, b)
+				}
+				score := noScore
+				if ix == 0  {
+					score = -search(-beta, -alpha, depth-1+ext, 1, &childPV, b) // full search
+				} else {
+					score = -search(-alpha-1, -alpha, depth-1+ext-lmrRed, 1, &childPV, b)
+					if score > alpha && !limits.stop { // re-search due to PVS and/or lmr
+						score = -search(-beta, -alpha, depth-1+ext, 1, &childPV, b)
+					}
+				}
 
 				b.unmove(mv)
-
-				////////////////////////////////////
-				if !checkKey(b) {
-					fmt.Println("fullkey=", b.fullKey(), "Key", b.key, mv.StringFull())
-					fmt.Println("INVALID KEY AFTER UNMOVE ROOT")
-				}
-				///////////////////////////////////////
 
 				if limits.stop {
 					break
@@ -189,9 +195,11 @@ func root(toEngine chan bool, frEngine chan string) {
 					tell(fmt.Sprintf("info score cp %v depth %v nodes %v time %v pv ", bm.eval(), depth, cntNodes, int(t1.Seconds()*1000)), pv.String())
 				}
 			}
+			if !limits.stop {
+				ebfTab.add(cntNodes)
+			}
 
-			ebfTab.add(cntNodes)
-		}
+		} // end ID
 		ml.sort()
 
 		trans.store(b.fullKey(), bm, transDepth, 0, bs, scoreType(bs, alpha, beta))
@@ -202,8 +210,8 @@ func root(toEngine chan bool, frEngine chan string) {
 		if t1.Seconds() != 0 {
 			nps = float64(cntNodes) / t1.Seconds()
 		}
-		ebfTab.ebf()
-		tell(fmt.Sprintf("info score cp %v depth %v nodes %v  time %v nps %v pv %v", bm.eval(), depth-1, cntNodes, int(t1.Seconds()*1000), uint(nps), pv.String()))
+		ebfTab.ebf(transDepth)
+		tell(fmt.Sprintf("info score cp %v depth %v nodes %v  time %v nps %v pv %v", bm.eval(), transDepth, cntNodes, int(t1.Seconds()*1000), uint(nps), pv.String()))
 		frEngine <- fmt.Sprintf("bestmove %v%v", sq2Fen[bm.fr()], sq2Fen[bm.to()])
 	}
 }
@@ -211,7 +219,7 @@ func root(toEngine chan bool, frEngine chan string) {
 //TODO search: Late Move Reduction
 
 //TODO search: Internal Iterative Depening
-//TODO search: Delta Pruning
+//TODO search: Futility/Delta Pruning
 //TODO search: more complicated time handling schemes
 //TODO search: other reductions and extensions
 func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
@@ -274,7 +282,7 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 		if depth <= 3 { // static
 			// if you don't beat me with 100 points,
 			// then I think your position sucks
-			sc = -qs(-beta+1, b)
+			sc = -qs(-beta+1, b) // TODO: maybe 75-100 points bonus for opponent?
 		} else { // dynamic
 			sc = -search(-beta, -beta+1, depth-3-1, ply, &childPV, b)
 		}
@@ -294,7 +302,7 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 	bm := noMove
 
 	var genInfo = genInfoStruct{sv: 0, ply: ply, transMove: transMove}
-	cntMoves:=0
+	cntMoves := 0
 	next = nextNormal
 	for mv, msg := next(&genInfo, b); mv != noMove; mv, msg = next(&genInfo, b) {
 		_ = msg
@@ -304,17 +312,22 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 		}
 
 		childPV.clear()
-
-		if pvNode && bm != noMove {
-			score = -search(-alpha-1, -alpha, depth-1, ply+1, &childPV, b)
-			if score > alpha {
-				score = -search(-beta, -alpha, depth-1, ply+1, &childPV, b)
-			}
-		} else {
-			score = -search(-beta, -alpha, depth-1, ply+1, &childPV, b)
+		lmrRed := 0
+		ext := 0 // TODO: make extension function
+		if ext == 0 {
+			lmrRed = lmr(mv, inCheck, depth, genInfo.sv, cntMoves, b)
 		}
-		cntMoves++
+		if pvNode && cntMoves == 0 {
+			score = -search(-beta, -alpha, depth-1+ext, ply+1, &childPV, b)
+		} else {
+			score = -search(-alpha-1, -alpha, depth-1+ext-lmrRed, ply+1, &childPV, b)
+			if score > alpha {
+				score = -search(-beta, -alpha, depth-1+ext, ply+1, &childPV, b)
+			}
+		}
+
 		b.unmove(mv)
+		cntMoves++
 
 		if score > bs {
 			bs = score
@@ -362,10 +375,10 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 		}
 	}
 
-	if cntMoves==0{ // whe didn't find any legal moves - either mate or stalemate
-		sc:=0  // we could have a contempt value here instead
-		if inCheck{ // must be a mate
-			sc= -mateEval+ply+1
+	if cntMoves == 0 { // we didn't find any legal moves - either mate or stalemate
+		sc := 0      // we could have a contempt value here instead
+		if inCheck { // must be a mate
+			sc = -mateEval + ply + 1
 		}
 
 		if useTT {
@@ -378,6 +391,22 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 		trans.cBest++
 	}
 	return bs
+}
+
+// compute late move reduction
+func lmr(mv move, inCheck bool, depth, sv, cntMoves int, b *boardStruct) int {
+	interesting := inCheck || mv.cp() != empty || mv.pr() != empty ||
+		b.isAttacked(b.King[b.stm], b.stm.opp()) ||
+		(b.stm == WHITE && mv.pc() == wP && mv.to() >= A6) ||
+		(b.stm == BLACK && mv.pc() == bP && mv.to() <= H3) // even big threats? castling?
+	red := 0
+	if !interesting && depth >= 3 && sv >= nextFirstNonCp {
+		red = 1
+		if depth >= 5 && sv >= nextFirstNonCp {
+			red = depth / 3
+		}
+	}
+	return red
 }
 
 // is this a position to avoid null move?
@@ -879,7 +908,7 @@ func nextNormal(genInfo *genInfoStruct, b *boardStruct) (move, string) {
 		for ix := 0; ix < len(*ml); ix++ {
 			if (*ml)[ix].cmpFrToP(genInfo.transMove) || (*ml)[ix].cmpFrToP(genInfo.counterMv) ||
 				(*ml)[ix].cmpFrToP(killers[genInfo.ply].k1) || (*ml)[ix].cmpFrToP(killers[genInfo.ply].k2) {
-							continue
+				continue
 			}
 			sc := int(history.get((*ml)[ix].fr(), (*ml)[ix].to(), b.stm))
 			if sc > bs {
@@ -939,13 +968,13 @@ func startPerft(depth int, bd *boardStruct) uint64 {
 			continue
 		}
 		dbg := false
-	/* 
-		/////////////////////////////////////////////////////////////
-		if mv.fr() == D4 && mv.to() == F4 {
-			dbg = true
-		}
-		/////////////////////////////////////////////////////////////
- 	*/
+		/*
+			/////////////////////////////////////////////////////////////
+			if mv.fr() == D4 && mv.to() == F4 {
+				dbg = true
+			}
+			/////////////////////////////////////////////////////////////
+		*/
 		count := perft(dbg, depth-1, 1, bd)
 		totCount += count
 		fmt.Printf("%2d: %v \t%v \t%v\n", ix+1, mv.String(), count, msg)
@@ -976,29 +1005,29 @@ func perft(dbg bool, depth, ply int, bd *boardStruct) uint64 {
 		}
 		_ = msg
 		deb := false
-	/* 
-		////////////////////////////////////////////////////////////////
-		if dbg && mv.fr() == F5 && mv.to() == F4 {
-			deb = true
-		}
-		if dbg && mv.fr() == E2 && mv.to() == E4 {
-			deb = true
-		}
-		////////////////////////////////////////////////////////////////
-	*/
+		/*
+			////////////////////////////////////////////////////////////////
+			if dbg && mv.fr() == F5 && mv.to() == F4 {
+				deb = true
+			}
+			if dbg && mv.fr() == E2 && mv.to() == E4 {
+				deb = true
+			}
+			////////////////////////////////////////////////////////////////
+		*/
 		cnt := perft(deb, depth-1, ply+1, bd)
 		count += cnt
-	/*
-		/////////////////////////////////////////////
-		if dbg && !deb  {
-			fmt.Println(ix+1, ":(e4)     ", mv.String(), msg, "\t", cnt)
-			if ix==1{
-				fmt.Println("K1",killers[ply].k1.StringFull())
-				fmt.Println("K2",killers[ply].k2.StringFull())
+		/*
+			/////////////////////////////////////////////
+			if dbg && !deb  {
+				fmt.Println(ix+1, ":(e4)     ", mv.String(), msg, "\t", cnt)
+				if ix==1{
+					fmt.Println("K1",killers[ply].k1.StringFull())
+					fmt.Println("K2",killers[ply].k2.StringFull())
+				}
 			}
-		}
-		////////////////////////////////////////////
-	*/
+			////////////////////////////////////////////
+		*/
 		bd.unmove(mv)
 		ix++
 	}

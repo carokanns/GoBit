@@ -286,12 +286,14 @@ func handleMyPositions(words []string) {
 	handleSetOption(strings.Split("setoption name hash value 256", " "))
 
 	switch words[1] {
-	case "london":
+	case "london":  // London position
 		handlePosition("position startpos moves d2d4 d7d5 c1f4 g8f6 e2e3 c7c5 b1d2 b8c6 c2c3 e7e6 f1d3 f8d6")
-	case "phil":
+	case "phil": 	// Philidor position
 		handlePosition("position startpos moves e2e4 d7d6 d2d4 e7e5 d4e5 d6e5 d1d8 e8d8 g1f3 f7f6 b1c3 c7c6 f1c4")
-	case "english":
+	case "english":	// English position
 		handlePosition("position startpos moves c2c4 e7e5 g2g3 b8c6 f1g2 g7g6 b1c3 f8g7 e2e4 d7d6 g1e2 g8f6")
+	case "bogo":	// Bogo Indian position
+		handlePosition("position fen 1rb1r1k1/2pn1ppp/1p1pqn2/p4N2/2PPp1P1/2P1B2P/P1Q1PPB1/1R3RK1 b - - 0 16") 
 	default:
 		tell("info string not correct pos command " + words[1] + " doesn't exist. " + strings.Join(words[:], " "))
 	}

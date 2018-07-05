@@ -699,10 +699,8 @@ func Test_move_key(t *testing.T) {
 	}{
 		{"e4 no capt", "position startpos moves e2e4 d7d5", movStr{E4, E5, wP, empty, empty}},
 		{"exd5 capt", "position startpos moves e2e4 d7d5", movStr{E4, D5, wP, bP, empty}},
-		{"exd5 capt", "position fen r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - moves e2e4 d7d5", 
-			movStr{E4, D5, wP, bP, empty}},
-
-		
+		{"Bxa6 capt", "position fen r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -", 
+			movStr{E2, A6, wB, bB, empty}},				
 	}
 
 	for _, tt := range tests {

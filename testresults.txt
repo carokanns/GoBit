@@ -1,29 +1,61 @@
-depth  	features       	pos            sec      nodes         nps
-_____  	___________    	________   	______   ________ 	_________
-    8	a/b            	startpos    19,912   6,112944     ,305475
+depth  	features       	pos            sec      nodes         nps	 ebf
+_____  	___________    	________   	______   ________ 	_________ 	____ 
+    8	a/b            	startpos    19,912   6,112944     ,305475 			
 		    			London      70,288  10,687889     ,152159
 
-		a/b, Ki       	startpos      ,122   0,158506    1,299229
+		a/b, Ki       	startpos      ,122    ,158506    1,299229
 		              	London       6,752   8,792734    1,326191
 
-		a/b, Ki, ID   	startpos	  ,121   0,152075    1,256818
+		a/b, Ki, ID   	startpos	  ,121    ,152075    1,256818
 		              	London		 6,047   8,649703    1,435171
 _________________________________________________________________
-   10   No transtab		startpos	 3,119	 4,505931	 1,444434
-   						Philidor   110,651 215,619499	 1,948644
-   						English	   276,364 423,967055	 1,534088
-   						London	   247,971 295,266527	 1,190725
+   10   No Transtab		startpos	 3,119	 4,505931	 1,444434 	4.66
+   						Philidor   110,651 215,619499	 1,948644   5.13
+   						English	   276,364 423,967055	 1,534088	5.23
+   						London	   247,971 295,266527	 1,190725   5.03
 
-		with Transtab   startpos	 1,324 	 1,663608	 1,255964			
-						Philidor	17,298 	29,840873	 1,725049
-   						English		32,839  44,698863	 1,361119
-   						London	   174,510 202,683643    1,161441
+		with Transtab   startpos	 1,324 	 1,663608	 1,255964	3.98		
+						Philidor	17,298 	29,840873	 1,725049	3.55	
+   						English		32,839  44,698863	 1,361119	3.65
+   						London	   174,510 202,683643    1,161441 	5.28
 
-Startpos (20 moves):
-	position startpos
+___After fixed bug pawnNonCapt__________________________________________
+   10   No Transtab		startpos	93,931 141,851509	 1,510154 	7.50
+   						Philidor   325,292 609,970328	 1,875145   6.83		
+   						English	   558,262 744,630687	 1,333836	6.46
+   						London	   572,254 624,100955	 1,090599   6.34
+
+		with Transtab   startpos	43,575  58,058356	 1,332359	5.57		
+						Philidor   101,766 156,981286	 1,542563	6.48 	
+   						English	   131,400 165,895375	 1,262521	5.53 
+   						London	   357,878 360,155371    1,006362 	6.36
+
+        next-func		startpos	37,697  61,458083	 1,630294	6.49		
+		& hist Tab		Philidor    87,811 147,760903	 1,682701	6.03	
+   						English	    99,781 148,993558	 1,493197	5.91 
+   						London	   242,576 334,888548    1,380550	6.10
+
+        null Move		startpos	 1,056    ,969995	  ,918469	3.44		
+						Philidor     1,888 	 1,676920	  ,888196	1.57	
+   						English	     1,310   1,035997	  ,790257	3.06
+   						London	   	 3,059 	 3,032718     ,991220	3.03
+________________________________________________________________________   						
+movet  features       	pos          d.mve      nodes         nps	 ebf
+_____  ___________    	________    ______   ________ 	_________ 	____ 
+ 10s					Bogo	     11.29	11,451869	 1,168536	2.68		
+						Philidor      12.1 	10,819999	 1,104034	2.16	
+   						English	     12.30   9,740708	  ,993901	2.72
+   						London	   	 11.50 	 9,703515     ,990131	3.44
+
+Bogo indian (29 moves):
+	position fen 1rb1r1k1/2pn1ppp/1p1pqn2/p4N2/2PPp1P1/2P1B2P/P1Q1PPB1/1R3RK1 b - - 0 16   						
 Philidor position (no Q, 28 moves):
 	position startpos moves e2e4 d7d6 d2d4 e7e5 d4e5 d6e5 d1d8 e8d8 g1f3 f7f6 b1c3 c7c6 f1c4
 English position (30 moves):
 	position startpos moves c2c4 e7e5 g2g3 b8c6 f1g2 g7g6 b1c3 f8g7 e2e4 d7d6 g1e2 g8f6
 London position (50 moves):
 	position startpos moves d2d4 d7d5 c1f4 g8f6 e2e3 c7c5 b1d2 b8c6 c2c3 e7e6 f1d3 f8d6
+d4c5 d6c5 g1f3 d8e7 d2b3 c5b6 f3e5 c6e5 f4e5 e8g8 a1c1 f6d7 c1b1
+
+Startpos (20 moves):
+	position startpos

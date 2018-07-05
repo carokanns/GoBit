@@ -13,9 +13,11 @@
     "GoBit.exe~": true,
     "london.txt": true,
     "engine-interface.txt": true,
-    "README.md": true,
+
     "perft_tests.txt": true,
-    "temp.goo": true
+    "*.goo": true,
+    ".gitignore": true,
+    "diverse": true
   },
   "cSpell.words": [
     "Pval",
