@@ -40,20 +40,36 @@ ___After fixed bug pawnNonCapt__________________________________________
    						English	     1,310   1,035997	  ,790257	3.06
    						London	   	 3,059 	 3,032718     ,991220	3.03
 ________________________________________________________________________   						
-movet  features       	pos          d.mve      nodes         nps	 ebf
-_____  ___________    	________    ______   ________ 	_________ 	____ 
+moves  features       	pos          dp.mv      nodes         nps	 ebf
+_____  ___________    	________     _____  _________ 	 ________ 	____ 
  10s					Bogo	     11.29	11,451869	 1,168536	2.68		
-						Philidor      12.1 	10,819999	 1,104034	2.16	
+						Philidor     12.01 	10,819999	 1,104034	2.16	
    						English	     12.30   9,740708	  ,993901	2.72
    						London	   	 11.50 	 9,703515     ,990131	3.44
+   																		
+   		LMR             Bogo	     14.01	12,824212	 1,308534	1.85
+						Philidor     15.11 	12,545980	 1,280193	1.75
+   						English	     15.04  11,694244	 1,193252	2.08
+   						London	   	 13.03 	12,195981    1,244448	2.14
 
-Bogo indian (29 moves):
+   		LMR (fixed) 	Bogo	     13.01	14,335952	 1,462792	7.21
+						Philidor     16.01 	14,709155	 1,400869	1.68
+   						English	     15.01  14,670097	 1,496886	2.62
+   						London	   	 14.02 	14,179132    1,446756	1.80
+																						
+ 		ASP   			Bogo	     13.03	15,093992	 1,540103	5.82
+						Philidor     14.02 	15,451797	 1,576700	1.64
+   						English	     15.01  14,903888	 1,520719	1.68
+   						London	   	 14.02 	14,620955    1,491807	1.66
+		
+
+Bogo Indian (29 moves):
 	position fen 1rb1r1k1/2pn1ppp/1p1pqn2/p4N2/2PPp1P1/2P1B2P/P1Q1PPB1/1R3RK1 b - - 0 16   						
-Philidor position (no Q, 28 moves):
+Philidor (no Q, 28 moves):
 	position startpos moves e2e4 d7d6 d2d4 e7e5 d4e5 d6e5 d1d8 e8d8 g1f3 f7f6 b1c3 c7c6 f1c4
-English position (30 moves):
+English (30 moves):
 	position startpos moves c2c4 e7e5 g2g3 b8c6 f1g2 g7g6 b1c3 f8g7 e2e4 d7d6 g1e2 g8f6
-London position (50 moves):
+London (50 moves):
 	position startpos moves d2d4 d7d5 c1f4 g8f6 e2e3 c7c5 b1d2 b8c6 c2c3 e7e6 f1d3 f8d6
 d4c5 d6c5 g1f3 d8e7 d2b3 c5b6 f3e5 c6e5 f4e5 e8g8 a1c1 f6d7 c1b1
 

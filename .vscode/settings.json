@@ -13,7 +13,6 @@
     "GoBit.exe~": true,
     "london.txt": true,
     "engine-interface.txt": true,
-
     "perft_tests.txt": true,
     "*.goo": true,
     ".gitignore": true,

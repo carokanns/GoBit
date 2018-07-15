@@ -8,8 +8,10 @@ import (
 )
 
 const (
-	maxDepth = 100
-	maxPly   = 100
+	maxDepth    = 100
+	maxPly      = 100
+	startMargin = 10
+	maxMargin   = 500
 )
 
 var cntNodes uint64
@@ -102,12 +104,12 @@ func (e *ebfStruct) ebf(depth int) float64 {
 		return 0
 	}
 	ebf := 0.0
-	nodes := float64((*e)[len(*e)-1])   // the last depth
+	nodes := float64((*e)[len(*e)-1]) // the last depth
 	prevNodes := float64((*e)[len(*e)-2])
 
-	if nodes >  0.0 && prevNodes > 0.0 {
-//		ebf = (prevNodes2/prevNodes3 + prevNodes1/prevNodes2) / 2
-		ebf = nodes/prevNodes 
+	if nodes > 0.0 && prevNodes > 0.0 {
+		//		ebf = (prevNodes2/prevNodes3 + prevNodes1/prevNodes2) / 2
+		ebf = nodes / prevNodes
 	}
 	fmt.Printf("ebf: %0.2f age=%v Used=%v Stored: %v Tried: %v Found: %v Prunes: %v Best: %v\n", ebf, trans.age, trans.cntUsed, trans.cStores, trans.cTried, trans.cFound, trans.cPrune, trans.cBest)
 	return ebf
@@ -132,7 +134,7 @@ func root(toEngine chan bool, frEngine chan string) {
 	pv.new()
 	ml.new(60)
 	ebfTab.new()
-	b := &board
+	bd := &board
 	for _ = range toEngine {
 		limits.startTime, limits.lastTime = time.Now(), time.Now()
 		cntNodes = 0
@@ -143,11 +145,22 @@ func root(toEngine chan bool, frEngine chan string) {
 
 		trans.initSearch() // incr age coounters=0
 
-		genAndSort(0, b, &ml)
+		genAndSort(0, bd, &ml)
 		depth = 0
 
 		transDepth := 0
-		inCheck := b.isAttacked(b.King[b.stm], b.stm.opp())
+		inCheck := bd.isAttacked(bd.King[bd.stm], bd.stm.opp())
+		if len(ml) == 0{
+			t1 := time.Since(limits.startTime)
+			if inCheck{
+				tell(fmt.Sprintf("info score cp %v depth 1 nodes 0 time %v", -mateEval, t1))
+			}else{
+				tell(fmt.Sprintf("info score cp %v depth 1 nodes 0 time %v", 0, t1))
+			}
+			break
+		}
+
+		lastScore := noScore
 		bm := ml[0]
 		bs := noScore // bm keeps the best from prev iteration in case of immediate stop before first is done in this iteration
 		for depth = 1; depth <= limits.depth && !limits.stop; depth++ {
@@ -157,43 +170,79 @@ func root(toEngine chan bool, frEngine chan string) {
 			for ix, mv := range ml { // root move loop
 				childPV.clear()
 
-				b.move(mv)
+				bd.move(mv)
 				tell(fmt.Sprintf("info depth %v currmove %v currmovenumber %v", depth, mv.String(), ix+1))
 				lmrRed := 0
 				ext := 0 // TODO: make extension function
 				if ext == 0 {
-					lmrRed = lmr(mv, inCheck, depth, ix+1, ix, b)
+					lmrRed = lmr(mv, inCheck, depth, ix+1, ix, bd)
 				}
 				score := noScore
-				if ix == 0  {
-					score = -search(-beta, -alpha, depth-1+ext, 1, &childPV, b) // full search
+				if depth < 7 {
+					if ix == 0 {
+						childPV.clear()
+						score = -search(minEval, maxEval, depth-1+ext, 1, &childPV, bd) // full search
+					} else {
+						a, b := alpha, alpha+1
+						childPV.clear()
+						score = -search(-b, -a, depth-1+ext-lmrRed, 1, &childPV, bd)
+						if score > a  && !limits.stop { // re-search due to PVS and/or lmr
+							b = beta
+							childPV.clear()
+							score = -search(-b, -a, depth-1+ext, 1, &childPV, bd)
+						}
+					}
 				} else {
-					score = -search(-alpha-1, -alpha, depth-1+ext-lmrRed, 1, &childPV, b)
-					if score > alpha && !limits.stop { // re-search due to PVS and/or lmr
-						score = -search(-beta, -alpha, depth-1+ext, 1, &childPV, b)
+					// Aspiration search
+					if ix == 0 {
+						score = noScore
+						ls := lastScore
+						margin := startMargin
+						for (score <= alpha || score >= beta) && !limits.stop {
+							aspWindow(&alpha, &beta, &margin, ls)
+							childPV.clear()
+							score = -search(-beta, -alpha, depth-1+ext, 1, &childPV, bd) // full ASP search
+							ls = score
+						}
+					} else {
+						a, b := alpha, alpha+1
+						childPV.clear()
+						score = -search(-b, -a, depth-1+ext-lmrRed, 1, &childPV, bd)
+						if score > a && !limits.stop { // re-search due to PVS and/or lmr
+							score = noScore
+							ls := lastScore
+							margin := startMargin
+							for (score <= a || score >= b) && !limits.stop {
+								aspWindow(&a, &b, &margin, ls)
+								childPV.clear()
+								score = -search(-b, -a, depth-1+ext, 1, &childPV, bd)
+								ls = score
+							}
+						}
 					}
 				}
+				bd.unmove(mv)
 
-				b.unmove(mv)
-
-				if limits.stop {
+				if limits.stop  {
 					break
 				}
 				ml[ix].packEval(score)
 				if score > bs {
-					bs = score
+					bs, lastScore, alpha = score, score, score
 					pv.catenate(mv, &childPV)
 
 					bm = ml[ix]
-					alpha = score
 					transDepth = depth
 					if depth >= 0 {
-						trans.store(b.fullKey(), mv, transDepth, 0, score, scoreTypeLower)
+						trans.store(bd.fullKey(), mv, transDepth, 0, score, scoreTypeLower)
 					}
 
 					t1 := time.Since(limits.startTime)
 					tell(fmt.Sprintf("info score cp %v depth %v nodes %v time %v pv ", bm.eval(), depth, cntNodes, int(t1.Seconds()*1000)), pv.String())
 				}
+			}
+			if len(ml) == 1 {
+				limits.setStop(true)
 			}
 			if !limits.stop {
 				ebfTab.add(cntNodes)
@@ -202,7 +251,7 @@ func root(toEngine chan bool, frEngine chan string) {
 		} // end ID
 		ml.sort()
 
-		trans.store(b.fullKey(), bm, transDepth, 0, bs, scoreType(bs, alpha, beta))
+		trans.store(bd.fullKey(), bm, transDepth, 0, bs, scoreType(bs, alpha, beta))
 
 		// time, nps, ebf
 		t1 := time.Since(limits.startTime)
@@ -216,7 +265,27 @@ func root(toEngine chan bool, frEngine chan string) {
 	}
 }
 
-//TODO search: Late Move Reduction
+// set aspiration window and check if asp-loop should conutine
+func aspWindow(alpha, beta, margin *int, lastScore int) {
+
+	// condition 1: mateScore but not first time
+	if *margin != startMargin && isMateScore(lastScore) {
+		*alpha, *beta = minEval, maxEval
+		return  // Find the mate and it should stop after next search 
+	}
+
+	// condition 2: reached maxMargin. run with minEval, maxEval. Should stop after next search
+	if *margin >= maxMargin {
+		*alpha, *beta = minEval, maxEval
+		return 
+	}
+
+	// other conditions: create asp-window and run until condition 2
+	*alpha, *beta = lastScore-*margin, lastScore+*margin
+	*margin *= 2
+	return
+}
+
 
 //TODO search: Internal Iterative Depening
 //TODO search: Futility/Delta Pruning
@@ -397,15 +466,16 @@ func search(alpha, beta, depth, ply int, pv *pvList, b *boardStruct) int {
 func lmr(mv move, inCheck bool, depth, sv, cntMoves int, b *boardStruct) int {
 	interesting := inCheck || mv.cp() != empty || mv.pr() != empty ||
 		b.isAttacked(b.King[b.stm], b.stm.opp()) ||
-		(b.stm == WHITE && mv.pc() == wP && mv.to() >= A6) ||
-		(b.stm == BLACK && mv.pc() == bP && mv.to() <= H3) // even big threats? castling?
+		(mv.pc() == wP && mv.to() >= A6) ||
+		(mv.pc() == bP && mv.to() <= H3) // even big threats and castling?
 	red := 0
-	if !interesting && depth >= 3 && sv >= nextFirstNonCp {
+	if !interesting && depth >= 3 && cntMoves >= 3 && sv >= nextFirstNonCp {
 		red = 1
-		if depth >= 5 && sv >= nextFirstNonCp {
+		if depth >= 5 {
 			red = depth / 3
 		}
 	}
+
 	return red
 }
 
